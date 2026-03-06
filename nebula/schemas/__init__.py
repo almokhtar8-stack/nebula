@@ -1,6 +1,8 @@
 from nebula.schemas.inputs import (
+    DietType,
     EvidenceGrade,
     EvidenceEntry,
+    ExerciseGoal,
     GeneticFeature,
     GenomeBuild,
     NebulaReport,
@@ -12,13 +14,17 @@ from nebula.schemas.inputs import (
     RuleCategory,
     RuleResult,
     SampleQCResult,
+    SexBio,
+    SleepQuality,
     UserMetadata,
     WhitelistEntry,
 )
 
 __all__ = [
+    "DietType",
     "EvidenceGrade",
     "EvidenceEntry",
+    "ExerciseGoal",
     "GeneticFeature",
     "GenomeBuild",
     "NebulaReport",
@@ -30,6 +36,8 @@ __all__ = [
     "RuleCategory",
     "RuleResult",
     "SampleQCResult",
+    "SexBio",
+    "SleepQuality",
     "UserMetadata",
     "WhitelistEntry",
 ]

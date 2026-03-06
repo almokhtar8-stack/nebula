@@ -431,9 +431,9 @@ rules:
       - "Questionnaire: sun exposure / latitude"
     recommendation_text: >
       You carry multiple variants associated with lower circulating vitamin D
-      levels. If you have limited sun exposure or live at a northern latitude,
-      you may particularly benefit from vitamin D supplementation and periodic
-      monitoring of your 25(OH)D levels.
+      levels. Those with limited sun exposure or living at northern latitudes
+      may particularly benefit from vitamin D supplementation and periodic
+      monitoring of 25(OH)D levels.
     reason: >
       Combined effect of GC, CYP2R1, and DHCR7 variants on vitamin D status
       is well-replicated across multiple GWAS and biobank cohorts.

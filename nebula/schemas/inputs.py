@@ -79,7 +79,7 @@ class SampleQCResult(BaseModel):
 
     @property
     def overall_pass(self) -> bool:
-        return self.call_rate_pass and self.het_rate_pass and len(self.errors) == 0
+        return self.call_rate_pass and self.whitelist_coverage_pass and len(self.errors) == 0
 
 
 # ---------------------------------------------------------------------------
