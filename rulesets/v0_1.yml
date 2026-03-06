@@ -1,0 +1,798 @@
+# ============================================================
+# Nebula Rule Engine — Ruleset v0_1
+# Version: 0.1.0
+# Status: MVP
+# Rules: 21 deterministic rules (Fitness x4, Nutrition x8,
+#        Recovery/Sleep x3, Health Risk x6)
+#
+# EDITING GUIDE:
+#   - All rules live here. No rule logic lives in Python.
+#   - Add new rules by appending to this list and registering
+#     a trigger function in nebula/engine/evaluator.py.
+#   - Increment `version` on every change.
+#   - evidence_grade: Strong | Moderate | Exploratory
+#   - output_tier: tier_1 | tier_2 | tier_3
+#   - referral_trigger: true | false
+#   - confidence_adjustments: list of {condition, delta} pairs
+# ============================================================
+
+version: "0.1.0"
+description: >
+  MVP ruleset for Nebula v0.1. Covers fitness tendencies, nutrition,
+  recovery/sleep, and health-risk flagging from DNA + questionnaire.
+  All rules are deterministic IF/THEN logic. No ML. No LLMs.
+
+rules:
+
+  # ── FITNESS ────────────────────────────────────────────────────────────────
+
+  - id: FIT-001
+    category: Fitness
+    description: >
+      ACTN3 XX (homozygous stop) + endurance goal → endurance programming
+    trigger: FIT-001
+    required_data:
+      - "DNA: ACTN3 rs1815739"
+      - "Questionnaire: exercise_goals"
+    data_sources:
+      - "DNA: ACTN3 rs1815739 (XX genotype)"
+      - "Questionnaire: exercise goal = endurance"
+    recommendation_text: >
+      Your muscle fiber genetics suggest a tendency that aligns well with
+      endurance activities (running, cycling, swimming). Consider emphasizing
+      aerobic training in your program.
+    reason: >
+      ACTN3 XX genotype results in absence of alpha-actinin-3 in fast-twitch
+      fibers, associated with endurance performance in replicated studies.
+    evidence_grade: Strong
+    base_confidence: 80
+    confidence_adjustments:
+      - condition: has_endurance_goal
+        delta: 5
+    practical_action: >
+      Prioritize aerobic base training. Include at least 3 endurance sessions
+      per week (running, cycling, swimming, rowing). Progress volume before
+      intensity.
+    review_interval: "Static trait. Revisit if exercise goals change."
+    disclaimer: >
+      Genetic tendencies do not determine athletic potential. Training,
+      nutrition, and consistency are the primary drivers of fitness outcomes.
+    referral_trigger: false
+    output_tier: tier_1
+
+  - id: FIT-002
+    category: Fitness
+    description: ACTN3 RR (full expression) + strength/power goal
+    trigger: FIT-002
+    required_data:
+      - "DNA: ACTN3 rs1815739"
+      - "Questionnaire: exercise_goals"
+    data_sources:
+      - "DNA: ACTN3 rs1815739 (RR genotype)"
+      - "Questionnaire: exercise goal = strength/power"
+    recommendation_text: >
+      Your muscle fiber genetics are consistent with a tendency toward power
+      and sprint performance. Consider including explosive and strength-based
+      training (compound lifts, plyometrics, sprint intervals).
+    reason: >
+      RR genotype retains full alpha-actinin-3 expression in fast-twitch
+      fibers, associated with sprint and power performance.
+    evidence_grade: Strong
+    base_confidence: 80
+    confidence_adjustments:
+      - condition: has_strength_goal
+        delta: 5
+    practical_action: >
+      Include compound strength movements (squat, deadlift, press) 2-3x/week.
+      Add plyometric or sprint work. Ensure adequate protein intake for muscle
+      protein synthesis.
+    review_interval: "Static. Revisit if goals change."
+    disclaimer: >
+      Many endurance athletes carry RR. Genotype is one factor. Training
+      history, motivation, and consistency outweigh genetic tendency.
+    referral_trigger: false
+    output_tier: tier_1
+
+  - id: FIT-003
+    category: Fitness
+    description: COL5A1 rs12722 risk allele + high-impact exercise
+    trigger: FIT-003
+    required_data:
+      - "DNA: COL5A1 rs12722"
+      - "Questionnaire: exercise_type, injury_history"
+    data_sources:
+      - "DNA: COL5A1 rs12722 (risk allele present)"
+      - "Questionnaire: exercise type / training frequency"
+    recommendation_text: >
+      You carry a variant associated with a modestly increased tendency
+      toward soft-tissue injuries. Consider incorporating warm-up, prehab
+      exercises, and gradual load progression.
+    reason: >
+      COL5A1 variant associated with Achilles tendinopathy and soft-tissue
+      injury risk in athletic populations across replicated studies.
+    evidence_grade: Moderate
+    base_confidence: 60
+    confidence_adjustments:
+      - condition: no_questionnaire
+        delta: -15
+    practical_action: >
+      Add 10-15 minutes of dynamic warm-up before every session. Include
+      eccentric calf raises and hip mobility work 3x/week. Progress running
+      volume by no more than 10% per week.
+    review_interval: "Static. Revisit if new injury occurs."
+    disclaimer: >
+      This does not predict injury. It identifies a modest genetic tendency.
+      Injury risk is primarily determined by training load, recovery, and
+      technique.
+    referral_trigger: false
+    output_tier: tier_1
+
+  - id: FIT-004
+    category: Fitness
+    description: IL6 GG (high IL-6 producer) + training frequency ≥ 5x/week
+    trigger: FIT-004
+    required_data:
+      - "DNA: IL6 rs1800795"
+      - "Questionnaire: training_frequency_per_week"
+    data_sources:
+      - "DNA: IL6 rs1800795 (GG genotype)"
+      - "Questionnaire: training frequency ≥ 5x/week"
+    recommendation_text: >
+      Your genotype is associated with a stronger inflammatory response to
+      exercise. With your training frequency, consider ensuring adequate
+      recovery days between intense sessions and monitoring fatigue levels.
+    reason: >
+      GG genotype at IL6 -174 is associated with higher post-exercise
+      IL-6 production. Higher frequency amplifies cumulative inflammatory load.
+    evidence_grade: Moderate
+    base_confidence: 60
+    confidence_adjustments:
+      - condition: training_frequency_gte_5
+        delta: 10
+    practical_action: >
+      Schedule at least 2 full rest or low-intensity days per week. Prioritize
+      sleep (7-9 hours). Consider anti-inflammatory nutrition (omega-3, colorful
+      vegetables). Track resting heart rate as a recovery proxy.
+    review_interval: "Revisit if training frequency changes."
+    disclaimer: >
+      Inflammation after exercise is normal and necessary for adaptation. This
+      finding suggests a potentially stronger response, not a pathological
+      condition.
+    referral_trigger: false
+    output_tier: tier_1
+
+  # ── NUTRITION ──────────────────────────────────────────────────────────────
+
+  - id: NUT-001
+    category: Nutrition
+    description: CYP1A2 slow metabolizer → limit caffeine
+    trigger: NUT-001
+    required_data:
+      - "DNA: CYP1A2 rs762551"
+      - "Questionnaire: caffeine_mg_per_day"
+    data_sources:
+      - "DNA: CYP1A2 rs762551 (AC or CC — slow metabolizer)"
+      - "Questionnaire: caffeine intake"
+    recommendation_text: >
+      You are a slow caffeine metabolizer. Consider limiting caffeine to under
+      200mg per day (approximately 1-2 cups of coffee) and avoiding caffeine
+      after noon to minimize sleep disruption.
+    reason: >
+      CYP1A2 slow metabolizer status is associated with a prolonged caffeine
+      half-life and increased cardiovascular risk at high intake in replicated
+      pharmacogenomic studies.
+    evidence_grade: Strong
+    base_confidence: 85
+    confidence_adjustments:
+      - condition: poor_sleep
+        delta: 5
+    practical_action: >
+      Switch to decaf after midday. If you currently consume >200mg daily,
+      taper by 50mg per week to avoid withdrawal. Track sleep quality for
+      2 weeks after reducing intake.
+    review_interval: "Static trait. Reassess if sleep or cardiovascular concerns arise."
+    disclaimer: >
+      Individual caffeine tolerance varies. This is a genetic tendency, not a
+      universal rule. Monitor your own response.
+    referral_trigger: false
+    output_tier: tier_1
+
+  - id: NUT-002
+    category: Nutrition
+    description: LCT TT (lactase non-persistence) → dairy guidance
+    trigger: NUT-002
+    required_data:
+      - "DNA: LCT/MCM6 rs4988235"
+      - "Questionnaire: dairy_intake, gi_symptoms"
+    data_sources:
+      - "DNA: LCT rs4988235 (TT genotype — lactase non-persistent)"
+      - "Questionnaire: dairy intake / GI symptoms"
+    recommendation_text: >
+      Your genotype indicates that lactase production likely decreases after
+      childhood. If you experience GI discomfort with dairy, this may explain
+      it. Consider lactose-free alternatives or lactase supplements when
+      consuming dairy.
+    reason: >
+      rs4988235 TT genotype is strongly and consistently associated with
+      lactase non-persistence and adult-onset lactose intolerance.
+    evidence_grade: Strong
+    base_confidence: 85
+    confidence_adjustments:
+      - condition: gi_symptoms
+        delta: 5
+    practical_action: >
+      Trial 2 weeks dairy-free and track GI symptoms. If symptoms improve,
+      reintroduce with lactase enzyme supplement. Fermented dairy (yogurt,
+      aged cheese) is often better tolerated. Ensure adequate calcium from
+      non-dairy sources if dairy is reduced.
+    review_interval: "Static. Revisit if GI symptoms develop."
+    disclaimer: >
+      Some TT individuals tolerate moderate dairy, especially fermented forms.
+      Clinical confirmation via hydrogen breath test is definitive. This is a
+      predisposition finding, not a diagnosis of lactose intolerance.
+    referral_trigger: false
+    output_tier: tier_1
+
+  - id: NUT-003
+    category: Nutrition
+    description: MTHFR TT (homozygous C677T) → folate/methylfolate intake
+    trigger: NUT-003
+    required_data:
+      - "DNA: MTHFR rs1801133"
+      - "Questionnaire: diet_type, supplement_use"
+    data_sources:
+      - "DNA: MTHFR rs1801133 (TT — homozygous C677T)"
+      - "Questionnaire: diet type / supplement use"
+    recommendation_text: >
+      You carry two copies of the MTHFR C677T variant, which reduces your
+      enzyme's efficiency at converting folate to its active form (5-MTHF) by
+      approximately 70%. Ensure adequate folate intake through leafy greens,
+      legumes, or a methylfolate supplement if your diet is restricted.
+    reason: >
+      TT genotype at MTHFR C677T is well-characterized with ~70% reduced
+      enzyme activity. Homozygotes may have modestly elevated homocysteine
+      with low dietary folate.
+    evidence_grade: Strong
+    base_confidence: 80
+    confidence_adjustments:
+      - condition: restrictive_diet
+        delta: 5
+    practical_action: >
+      Aim for 400-800µg folate daily through dark leafy greens (spinach, kale),
+      lentils, and fortified foods. If supplementing, look for methylfolate
+      (5-MTHF) rather than folic acid. Discuss with your physician if pregnant
+      or planning pregnancy.
+    review_interval: "Static. Reassess if dietary patterns change significantly."
+    disclaimer: >
+      This is not a disease. It is a common variant (~10-15% of European
+      populations are TT). It means your folate metabolism is less efficient,
+      not absent. Do not interpret this as a 'mutation' requiring medical
+      treatment without physician guidance.
+    referral_trigger: false
+    output_tier: tier_1
+
+  - id: NUT-004
+    category: Nutrition
+    description: ALDH2 GA/AA (deficient) → alcohol flush / cancer risk warning
+    trigger: NUT-004
+    required_data:
+      - "DNA: ALDH2 rs671"
+      - "Questionnaire: alcohol_drinks_per_week"
+    data_sources:
+      - "DNA: ALDH2 rs671 (GA or AA — deficiency allele present)"
+      - "Questionnaire: alcohol intake"
+    recommendation_text: >
+      You carry the ALDH2 deficiency variant. If you drink alcohol, you likely
+      experience or are at risk for facial flushing and discomfort due to
+      acetaldehyde accumulation. If you carry two copies (AA genotype), alcohol
+      consumption is strongly associated with elevated esophageal cancer risk
+      and avoidance is recommended.
+    reason: >
+      ALDH2*2 causes near-complete loss of acetaldehyde metabolism. AA
+      homozygotes have well-documented elevated cancer risk with alcohol
+      exposure (CPIC guideline level).
+    evidence_grade: Strong
+    base_confidence: 85
+    confidence_adjustments: []
+    practical_action: >
+      GA: Moderate alcohol intake and monitor your flushing response carefully.
+      AA: Strong recommendation to avoid alcohol. Discuss with your physician.
+      This finding should be retained in your medical record.
+    review_interval: "Static. Reassess if alcohol habits change."
+    disclaimer: >
+      This is a metabolic finding, not a moral judgment. The recommendation
+      is based on the biochemical inability to clear acetaldehyde, a known
+      carcinogen. The flush response is a warning sign, not a harmless
+      inconvenience.
+    referral_trigger: true
+    output_tier: tier_2
+
+  - id: NUT-005
+    category: Nutrition
+    description: FTO AA (risk homozygote) → appetite regulation / portion awareness
+    trigger: NUT-005
+    required_data:
+      - "DNA: FTO rs9939609"
+      - "Questionnaire: goals, eating_habits"
+    data_sources:
+      - "DNA: FTO rs9939609 (AA — risk homozygote)"
+      - "Questionnaire: goals / eating habits"
+    recommendation_text: >
+      You carry two copies of the FTO variant most strongly associated with
+      appetite regulation differences. On average, this is linked to
+      approximately 1-1.5 kg higher body weight in population studies. You
+      may benefit from mindful eating strategies and portion awareness.
+    reason: >
+      FTO rs9939609 is the most replicated common obesity-associated variant,
+      affecting appetite and satiety signaling. Effect size is modest at the
+      individual level.
+    evidence_grade: Strong
+    base_confidence: 70
+    confidence_adjustments:
+      - condition: fat_loss_goal
+        delta: 10
+    practical_action: >
+      Practice mindful eating: eat slowly, pause between portions, use smaller
+      plates. Prioritize high-protein, high-fiber meals for satiety. Avoid
+      eating in front of screens. Keep food records for 1 week to identify
+      patterns.
+    review_interval: "Static. Revisit if goals change."
+    disclaimer: >
+      This variant explains a very small fraction of weight variation across
+      the population. Diet, exercise, sleep, and behavior are far more
+      important determinants of body weight. This is emphatically not an
+      'obesity gene.'
+    referral_trigger: false
+    output_tier: tier_1
+
+  - id: NUT-006
+    category: Nutrition
+    description: FADS1 TT (reduced converter) → direct EPA/DHA sources
+    trigger: NUT-006
+    required_data:
+      - "DNA: FADS1 rs174546"
+      - "Questionnaire: diet_type"
+    data_sources:
+      - "DNA: FADS1 rs174546 (TT — reduced desaturase activity)"
+      - "Questionnaire: diet type"
+    recommendation_text: >
+      Your genotype suggests reduced efficiency at converting plant-based
+      omega-3 (ALA from flaxseed, walnuts) into the active long-chain forms
+      (EPA/DHA). Consider including direct EPA/DHA sources: fatty fish 2-3x
+      per week or an algae-based omega-3 supplement.
+    reason: >
+      FADS1 TT genotype is strongly associated with reduced delta-5 desaturase
+      activity and lower circulating EPA/DHA levels in multiple cohorts.
+    evidence_grade: Strong
+    base_confidence: 80
+    confidence_adjustments:
+      - condition: vegan_or_vegetarian
+        delta: 10
+    practical_action: >
+      Include fatty fish (salmon, sardines, mackerel) 2-3x per week, OR take
+      an algae-derived DHA/EPA supplement (500-1000mg/day). If plant-based,
+      an algae-based supplement is the most direct solution. Reduce omega-6
+      competition (processed vegetable oils).
+    review_interval: "Static. Reassess if diet changes."
+    disclaimer: >
+      This does not mean plant-based omega-3 sources are useless. Conversion
+      is reduced, not absent. If you eat fatty fish regularly, this finding
+      has minimal additional practical impact.
+    referral_trigger: false
+    output_tier: tier_1
+
+  - id: NUT-007
+    category: Nutrition
+    description: HFE C282Y homozygous → iron overload monitoring
+    trigger: NUT-007
+    required_data:
+      - "DNA: HFE rs1800562"
+      - "Questionnaire: supplement_use"
+    data_sources:
+      - "DNA: HFE rs1800562 (AA — C282Y homozygous)"
+      - "Questionnaire: supplement use (iron supplements flagged)"
+    recommendation_text: >
+      You are homozygous for the HFE C282Y variant, the primary genetic risk
+      factor for hereditary hemochromatosis (iron overload). Approximately
+      28% of C282Y homozygotes develop clinical iron overload. You should
+      have your serum ferritin and transferrin saturation monitored by a
+      physician. Avoid iron supplements unless clinically indicated.
+    reason: >
+      C282Y homozygosity is the most common cause of hereditary
+      hemochromatosis in Northern European populations. Penetrance is
+      incomplete but risk is clinically significant.
+    evidence_grade: Strong
+    base_confidence: 85
+    confidence_adjustments: []
+    practical_action: >
+      Request serum ferritin + transferrin saturation from your physician.
+      Avoid supplemental iron unless directed by a physician. Avoid vitamin C
+      supplements with iron-rich meals (increases iron absorption). Regular
+      blood donation is a common therapeutic strategy — discuss with your
+      physician.
+    review_interval: "Annual ferritin monitoring recommended."
+    disclaimer: >
+      This is a genetic predisposition, not a diagnosis. Many C282Y
+      homozygotes never develop clinical disease. However, monitoring is
+      important because early detection prevents organ damage. Do not make
+      dietary changes based on this result alone without physician guidance.
+    referral_trigger: true
+    output_tier: tier_2
+
+  - id: NUT-008
+    category: Nutrition
+    description: Multiple vitamin-D loci risk alleles → vitamin D monitoring
+    trigger: NUT-008
+    required_data:
+      - "DNA: GC rs2282679, CYP2R1 rs10741657, DHCR7 rs12785878"
+      - "Questionnaire: sun_exposure, latitude_degrees"
+    data_sources:
+      - "DNA: GC rs2282679 / CYP2R1 rs10741657 / DHCR7 rs12785878 (≥3 risk alleles)"
+      - "Questionnaire: sun exposure / latitude"
+    recommendation_text: >
+      You carry multiple variants associated with lower circulating vitamin D
+      levels. If you have limited sun exposure or live at a northern latitude,
+      you may particularly benefit from vitamin D supplementation and periodic
+      monitoring of your 25(OH)D levels.
+    reason: >
+      Combined effect of GC, CYP2R1, and DHCR7 variants on vitamin D status
+      is well-replicated across multiple GWAS and biobank cohorts.
+    evidence_grade: Strong
+    base_confidence: 75
+    confidence_adjustments:
+      - condition: low_sun_or_northern_latitude
+        delta: 10
+    practical_action: >
+      Request 25(OH)D blood test. If below 50 nmol/L, discuss supplementation
+      (typically 1000-2000 IU/day D3) with your physician. Midday sun exposure
+      (10-30 minutes, arms/legs exposed) when available. Fatty fish and
+      fortified foods contribute modest dietary vitamin D.
+    review_interval: "Annual vitamin D blood test recommended."
+    disclaimer: >
+      Genetic variants influence vitamin D levels but do not determine
+      deficiency. Sun exposure, diet, and supplementation are the primary
+      modifiable factors. Clinical confirmation requires a blood test.
+    referral_trigger: false
+    output_tier: tier_1
+
+  # ── RECOVERY / SLEEP ───────────────────────────────────────────────────────
+
+  - id: REC-001
+    category: Recovery/Sleep
+    description: PER2 + CLOCK evening tendency + early wake schedule mismatch
+    trigger: REC-001
+    required_data:
+      - "DNA: PER2 rs2304672, CLOCK rs1801260"
+      - "Questionnaire: schedule_requires_early_wake"
+    data_sources:
+      - "DNA: PER2 rs2304672 / CLOCK rs1801260 (evening chronotype variants)"
+      - "Questionnaire: schedule requires early wake = true"
+    recommendation_text: >
+      Your genetic chronotype tendency leans toward eveningness, but your
+      schedule requires early waking. Consider morning bright light exposure
+      within 30 minutes of waking, consistent sleep/wake times, and avoiding
+      blue light 2 hours before bed.
+    reason: >
+      PER2 and CLOCK variants are associated with circadian preference.
+      Mismatch between genetic chronotype and imposed schedule is associated
+      with poorer sleep quality and social jet lag.
+    evidence_grade: Moderate
+    base_confidence: 60
+    confidence_adjustments:
+      - condition: chronotype_schedule_mismatch
+        delta: 15
+    practical_action: >
+      Use a bright light therapy lamp (≥10,000 lux) for 20-30 minutes within
+      30 minutes of waking. Keep wake time consistent 7 days a week (±30 min).
+      Set a phone blackout at least 1.5 hours before bed. Avoid caffeine after
+      noon (especially given slow CYP1A2 if also triggered).
+    review_interval: "Revisit if schedule or sleep habits change."
+    disclaimer: >
+      Chronotype is influenced by genetics, age, and habits. These suggestions
+      are behavioral optimizations, not treatments for a sleep disorder. If
+      sleep problems persist despite these measures, consult a physician.
+    referral_trigger: false
+    output_tier: tier_1
+
+  - id: REC-002
+    category: Recovery/Sleep
+    description: ADA Asn/Asn (slower adenosine clearance) → deeper sleep tendency
+    trigger: REC-002
+    required_data:
+      - "DNA: ADA rs73598374"
+      - "Questionnaire: sleep_quality"
+    data_sources:
+      - "DNA: ADA rs73598374 (Asn/Asn — slower adenosine clearance)"
+      - "Questionnaire: sleep quality"
+    recommendation_text: >
+      Your ADA genotype is associated with slower adenosine clearance, which
+      may contribute to deeper sleep. This is generally favorable but may
+      mean you feel groggier upon waking (sleep inertia). A consistent wake
+      time and morning light exposure can help.
+    reason: >
+      ADA Asp8Asn variant affects adenosine metabolism and has been associated
+      with increased slow-wave (deep) sleep in controlled polysomnography
+      studies.
+    evidence_grade: Moderate
+    base_confidence: 55
+    confidence_adjustments: []
+    practical_action: >
+      Keep a fixed wake time 7 days/week to regulate your circadian rhythm.
+      Avoid snoozing (increases sleep inertia). Get bright light exposure
+      immediately upon waking. Avoid naps longer than 20 minutes after 3pm.
+    review_interval: "Static."
+    disclaimer: >
+      Sleep architecture is complex and influenced by many factors beyond
+      adenosine metabolism. This is one genetic contributor to sleep depth
+      tendency. It does not diagnose any sleep disorder.
+    referral_trigger: false
+    output_tier: tier_1
+
+  - id: REC-003
+    category: Recovery/Sleep
+    description: CYP1A2 slow + caffeine >200mg + poor sleep → high-priority intervention
+    trigger: REC-003
+    required_data:
+      - "DNA: CYP1A2 rs762551"
+      - "Questionnaire: caffeine_mg_per_day, sleep_quality"
+    data_sources:
+      - "DNA: CYP1A2 rs762551 (slow metabolizer)"
+      - "Questionnaire: caffeine >200mg/day + poor sleep quality"
+    recommendation_text: >
+      You are a slow caffeine metabolizer, report consuming >200mg caffeine
+      daily, and report poor sleep. This combination is a high-priority target:
+      reducing caffeine and shifting consumption earlier in the day may
+      meaningfully improve your sleep quality.
+    reason: >
+      Cross-referencing slow CYP1A2 metabolism with high caffeine intake and
+      self-reported poor sleep creates a compounding intervention rationale
+      with strong mechanistic plausibility.
+    evidence_grade: Strong
+    base_confidence: 85
+    confidence_adjustments:
+      - condition: high_caffeine
+        delta: 5
+    practical_action: >
+      Reduce caffeine to ≤200mg/day over 2-3 weeks (taper to avoid withdrawal).
+      Move all caffeine intake before noon. Track sleep quality using a journal
+      or app for 4 weeks. If sleep does not improve meaningfully, consult a
+      physician — other contributors may be present.
+    review_interval: "Re-evaluate after 4 weeks of behavior change."
+    disclaimer: >
+      Improving sleep quality through caffeine reduction is well-supported
+      but may not resolve all sleep issues. If sleep problems persist after
+      caffeine modification, consult a physician.
+    referral_trigger: false
+    output_tier: tier_1
+
+  # ── HEALTH RISK ────────────────────────────────────────────────────────────
+
+  - id: RISK-001
+    category: Health Risk
+    description: CAD PRS ≥ 80th percentile → cardiovascular predisposition flag
+    trigger: RISK-001
+    required_data:
+      - "DNA: genome-wide PRS (CAD)"
+      - "Questionnaire: smoking, exercise, family_history_cvd"
+    data_sources:
+      - "PRS: CAD (≥80th percentile)"
+      - "Questionnaire: family history CVD / exercise frequency"
+    recommendation_text: >
+      Your polygenic risk score for coronary artery disease places you in the
+      top 20% of the reference population. This means your inherited genetic
+      loading for CAD is higher than approximately 80% of the reference group.
+      This is one risk factor among many. Lifestyle factors and clinical
+      markers are critical modifiable inputs.
+    reason: >
+      CAD PRS validated in 5+ independent cohorts. Top decile confers
+      approximately 3x risk vs. bottom decile. Meaningful at the individual
+      level when combined with lifestyle assessment.
+    evidence_grade: Strong
+    base_confidence: 80
+    confidence_adjustments:
+      - condition: family_history_cvd
+        delta: 5
+      - condition: ancestry_mismatch_cad
+        delta: -15
+    practical_action: >
+      Discuss this result with your physician. Request a lipid panel (LDL,
+      HDL, triglycerides) and blood pressure check if not recently done.
+      Prioritize Mediterranean-style diet, regular aerobic activity, not
+      smoking, and stress management. Annual cardiovascular health review.
+    review_interval: "Annual. Re-evaluate as PRS models improve."
+    disclaimer: >
+      This is NOT a diagnosis of heart disease. It is a measure of inherited
+      predisposition. Many people in the top decile never develop CAD. Many
+      people in the bottom decile do. Lifestyle, clinical values, and medical
+      history are essential context. This PRS is based on a primarily European
+      reference population — accuracy may vary by ancestry.
+    referral_trigger: true
+    output_tier: tier_2
+
+  - id: RISK-002
+    category: Health Risk
+    description: T2D PRS ≥ 80th percentile → type 2 diabetes predisposition flag
+    trigger: RISK-002
+    required_data:
+      - "DNA: genome-wide PRS (T2D)"
+      - "Questionnaire: BMI proxy, activity, diet, family_history_diabetes"
+    data_sources:
+      - "PRS: T2D (≥80th percentile)"
+      - "Questionnaire: activity level / diet / family history"
+    recommendation_text: >
+      Your polygenic risk score for type 2 diabetes places you in the top 20%.
+      Lifestyle factors — particularly weight management, physical activity,
+      and diet quality — have a large modifiable impact on T2D risk regardless
+      of genetic loading.
+    reason: >
+      T2D PRS validated across multiple biobanks (UK Biobank, Biobank Japan,
+      FinnGen). Top quintile carries meaningfully elevated risk, but T2D
+      is one of the most preventable chronic diseases through lifestyle.
+    evidence_grade: Strong
+    base_confidence: 80
+    confidence_adjustments:
+      - condition: sedentary_and_elevated_bmi
+        delta: 5
+      - condition: ancestry_mismatch_t2d
+        delta: -15
+    practical_action: >
+      Request HbA1c and fasting glucose from your physician if not tested
+      recently. Prioritize regular aerobic activity (150 min/week moderate
+      intensity). Reduce refined carbohydrate intake. Maintain a healthy
+      weight. Annual metabolic health check.
+    review_interval: "Annual."
+    disclaimer: >
+      This does not mean you will develop diabetes. T2D risk is heavily
+      modifiable. Physical activity and healthy weight are protective even
+      in the top genetic risk decile. This PRS uses a primarily European
+      reference — accuracy varies by ancestry.
+    referral_trigger: true
+    output_tier: tier_2
+
+  - id: RISK-003
+    category: Health Risk
+    description: Breast cancer PRS ≥ 80th (female) → screening adherence recommendation
+    trigger: RISK-003
+    required_data:
+      - "DNA: genome-wide PRS (BrCa, female)"
+      - "Questionnaire: sex_biological, family_history_breast_cancer"
+    data_sources:
+      - "PRS: Breast Cancer (≥80th percentile, female)"
+      - "Questionnaire: sex = female / family history breast cancer"
+    recommendation_text: >
+      Your breast cancer polygenic risk score places you in the top 20% of
+      the female reference population. This reflects common-variant genetic
+      risk only. Ensure adherence to recommended mammography screening
+      schedules and discuss with your physician, especially if you have family
+      history.
+    reason: >
+      Breast cancer PRS validated in BCAC and UK Biobank. Top quintile
+      has meaningfully elevated lifetime risk relative to the reference
+      population.
+    evidence_grade: Strong
+    base_confidence: 80
+    confidence_adjustments:
+      - condition: family_history_breast_cancer
+        delta: 5
+      - condition: ancestry_mismatch_brca
+        delta: -15
+    practical_action: >
+      Adhere to age-appropriate mammography screening schedule (consult local
+      guidelines). Discuss this result with your gynecologist or primary care
+      physician. If you have strong family history, ask about dedicated BRCA1/2
+      testing through a genetic counselor.
+    review_interval: "Annual. Reassess as PRS models improve."
+    disclaimer: >
+      This PRS captures common-variant risk only. It does NOT test for BRCA1
+      or BRCA2 mutations, which carry substantially higher per-variant risk.
+      A high PRS score does not mean you will develop breast cancer. Many
+      high-PRS women never develop it.
+    referral_trigger: true
+    output_tier: tier_2
+
+  - id: RISK-004
+    category: Health Risk
+    description: SLCO1B1 CC genotype → elevated statin myopathy risk
+    trigger: RISK-004
+    required_data:
+      - "DNA: SLCO1B1 rs4149056"
+    data_sources:
+      - "DNA: SLCO1B1 rs4149056 (CC genotype)"
+    recommendation_text: >
+      You carry a genotype associated with significantly elevated risk of
+      muscle-related side effects (myopathy) when taking simvastatin. If
+      you are prescribed a statin, inform your physician of this result so
+      they can consider alternative statins or adjusted dosing.
+    reason: >
+      SLCO1B1 CC genotype associated with ~17x increased risk of simvastatin
+      myopathy. This is a CPIC level A guideline variant with strong clinical
+      evidence.
+    evidence_grade: Strong
+    base_confidence: 85
+    confidence_adjustments: []
+    practical_action: >
+      Retain this finding in your medical record and share with any prescribing
+      physician. If you are currently taking simvastatin, discuss alternative
+      statins (rosuvastatin, pravastatin) with your physician. Do NOT stop
+      medication without physician guidance.
+    review_interval: "Static. Relevance increases if statins are prescribed."
+    disclaimer: >
+      This does not mean you cannot take statins. It means simvastatin
+      specifically carries elevated side-effect risk for you. Your physician
+      may choose an alternative statin with a different metabolic pathway.
+      This finding does not indicate heart disease.
+    referral_trigger: true
+    output_tier: tier_2
+
+  - id: RISK-005
+    category: Health Risk
+    description: DPYD *2A carrier → fluoropyrimidine chemotherapy toxicity risk
+    trigger: RISK-005
+    required_data:
+      - "DNA: DPYD rs3918290"
+    data_sources:
+      - "DNA: DPYD rs3918290 (*2A carrier — heterozygous or homozygous)"
+    recommendation_text: >
+      You carry a variant in the DPYD gene associated with severe toxicity
+      risk if treated with fluoropyrimidine-based chemotherapy (5-FU,
+      capecitabine). This is unlikely to be relevant unless you require such
+      treatment, but it is critical information for any oncologist to have.
+    reason: >
+      DPYD *2A deficiency can cause life-threatening toxicity with 5-FU.
+      CPIC guideline recommends dose reduction or alternative therapy.
+      This is an incidental finding of high clinical relevance.
+    evidence_grade: Strong
+    base_confidence: 90
+    confidence_adjustments: []
+    practical_action: >
+      This finding should be disclosed to any oncologist before any cancer
+      treatment. Retain in your permanent medical record. Discuss with a
+      genetic counselor who can explain the clinical implications in your
+      personal context.
+    review_interval: "Static. Lifelong relevance."
+    disclaimer: >
+      This finding is relevant only if fluoropyrimidine chemotherapy is being
+      considered. It does not indicate cancer risk or any current health issue.
+      Most DPYD carriers never need this information. However, if needed, it
+      is potentially life-saving.
+    referral_trigger: true
+    output_tier: tier_3
+
+  - id: RISK-006
+    category: Health Risk
+    description: HLA-DQ2.5/DQ8 positive + GI symptoms → celiac evaluation
+    trigger: RISK-006
+    required_data:
+      - "DNA: HLA-DQ2/DQ8 proxy variants"
+      - "Questionnaire: gi_symptoms"
+    data_sources:
+      - "DNA: HLA-DQ2.5 or DQ8 proxy variants (positive)"
+      - "Questionnaire: GI symptoms reported"
+    recommendation_text: >
+      You carry the HLA-DQ2.5 or HLA-DQ8 haplotype, which is present in
+      nearly all celiac disease patients, and you report GI symptoms that
+      could be consistent with celiac disease. Consider discussing
+      serological celiac testing (tTG-IgA) with your physician.
+    reason: >
+      HLA-DQ2/DQ8 is necessary but not sufficient for celiac disease.
+      ~30-40% of the general population carries these haplotypes; ~1%
+      develops celiac. GI symptoms combined with genetic predisposition
+      raises pre-test probability enough to warrant serological screening.
+    evidence_grade: Moderate
+    base_confidence: 65
+    confidence_adjustments:
+      - condition: gi_symptoms
+        delta: 15
+    practical_action: >
+      Request tTG-IgA (tissue transglutaminase IgA) blood test from your
+      physician. This requires continued gluten consumption to be accurate —
+      do NOT start a gluten-free diet before testing. If serological test
+      is positive, gastroenterologist referral and biopsy may follow.
+    review_interval: "Reassess if GI symptoms worsen or change."
+    disclaimer: >
+      The vast majority of HLA-DQ2/DQ8 carriers never develop celiac disease.
+      This is a predisposition flag combined with your self-reported symptoms.
+      Genetic testing alone is not diagnostic for celiac disease — serological
+      and biopsy confirmation is required.
+    referral_trigger: true
+    output_tier: tier_2

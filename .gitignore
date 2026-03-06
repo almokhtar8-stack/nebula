@@ -1,0 +1,99 @@
+# ── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.Python
+pip-wheel-metadata/
+*.whl
+
+# ── Virtual environments ──────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+.python-version
+
+# ── Testing ───────────────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+
+# ── Type checking ─────────────────────────────────────────────────────────────
+.mypy_cache/
+.pyright/
+pyrightconfig.json
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ── Outputs & generated files ─────────────────────────────────────────────────
+out/
+*.json
+!data/synthetic/*.json          # synthetic test data is tracked
+!pyproject.toml                 # project config is tracked
+
+# ── GENOMIC DATA — NEVER COMMIT ───────────────────────────────────────────────
+# These patterns cover real user data. If any of these appear in a PR,
+# the PR must be rejected and the contributor contacted immediately.
+*.vcf
+*.vcf.gz
+*.bcf
+*.bam
+*.bam.bai
+*.sam
+*.fastq
+*.fastq.gz
+*.fq
+*.fq.gz
+*.bed
+*.ped
+*.map
+*.raw
+*.genotype
+!data/synthetic/*.vcf           # synthetic test VCF is explicitly tracked
+
+# ── Secrets & credentials ─────────────────────────────────────────────────────
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+credentials/
+*_secret*
+*_private*
+anthropic_key*
+ncbi_key*
+
+# ── Surveillance outputs ──────────────────────────────────────────────────────
+surveillance_queue.json         # queue contains candidate data — not committed
+out/surveillance_notification.txt
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+logs/
+nebula.log
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+desktop.ini

@@ -1,0 +1,94 @@
+name: New Rule Proposal
+description: Propose a new wellness rule backed by published genomic evidence
+labels: ["rule-proposal", "needs-clinical-review"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Evidence standards reminder
+        All rules must meet:
+        - ≥2 independent replication cohorts
+        - p < 5×10⁻⁸
+        - Effect size that is clinically meaningful
+        - Peer-reviewed publication
+        
+        Proposals that do not meet this bar will be closed.
+
+  - type: input
+    id: rule_id
+    attributes:
+      label: Proposed rule ID
+      placeholder: "e.g. NUT-009 or FIT-005"
+    validations:
+      required: true
+
+  - type: input
+    id: category
+    attributes:
+      label: Category
+      placeholder: "Fitness | Nutrition | Recovery | Health Risk"
+    validations:
+      required: true
+
+  - type: input
+    id: rsid
+    attributes:
+      label: Primary rsID(s)
+      placeholder: "e.g. rs762551"
+    validations:
+      required: true
+
+  - type: input
+    id: gene
+    attributes:
+      label: Gene
+      placeholder: "e.g. CYP1A2"
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence summary
+      description: List the key publications with PMIDs, sample sizes, and populations.
+      placeholder: |
+        1. PMID 12345678 — n=120,000 European — p=3.2e-12 — OR=1.23 — replicated
+        2. PMID 87654321 — n=45,000 East Asian — p=8.1e-9 — replicated
+    validations:
+      required: true
+
+  - type: textarea
+    id: user_text
+    attributes:
+      label: Proposed user-facing recommendation text
+      description: Write exactly what the user would see. Use predisposition language.
+      placeholder: "Your genetics suggest a tendency toward... This does not mean you will..."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: tier
+    attributes:
+      label: Proposed output tier
+      options:
+        - tier_1 (wellness — no physician action required)
+        - tier_2 (physician discussion recommended)
+        - tier_3 (genetic counselor review required before disclosure)
+    validations:
+      required: true
+
+  - type: textarea
+    id: ancestry
+    attributes:
+      label: Ancestry limitations
+      description: Which populations was this studied in? Any limitations to note for users of other ancestries?
+    validations:
+      required: true
+
+  - type: input
+    id: counselor
+    attributes:
+      label: Genetic counselor reviewer (name and credentials, or "pending")
+      placeholder: "e.g. Dr. Jane Smith, CGC — or 'pending'"
+    validations:
+      required: true

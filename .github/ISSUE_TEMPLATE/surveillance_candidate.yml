@@ -1,0 +1,80 @@
+name: Surveillance Candidate Review
+description: Track review of a variant flagged by the literature surveillance system
+labels: ["surveillance", "needs-clinical-review"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template when the surveillance system has flagged a candidate
+        and a formal review decision needs to be tracked in GitHub.
+        
+        The candidate JSON is in your local `surveillance_queue.json`.
+        Do not paste raw queue data here — summarise only.
+
+  - type: input
+    id: candidate_id
+    attributes:
+      label: Candidate ID (from surveillance queue)
+      placeholder: "surv_rs762551_abc01"
+    validations:
+      required: true
+
+  - type: input
+    id: rsid
+    attributes:
+      label: rsID
+      placeholder: "rs762551"
+    validations:
+      required: true
+
+  - type: input
+    id: signal
+    attributes:
+      label: Signal type
+      placeholder: "strong_candidate | contradicts | moderate_candidate"
+    validations:
+      required: true
+
+  - type: input
+    id: auto_score
+    attributes:
+      label: Automated score
+      placeholder: "0-100"
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence_summary
+    attributes:
+      label: Evidence summary
+      description: What did the surveillance system find? Summarise GWAS hits and papers.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: recommendation
+    attributes:
+      label: Reviewer recommendation
+      options:
+        - Approve — add to whitelist
+        - Reject — insufficient evidence
+        - Watch — revisit in 6 months
+        - Escalate — requires genetic counselor decision
+        - Urgent — contradicts existing entry, expedite review
+    validations:
+      required: true
+
+  - type: textarea
+    id: rationale
+    attributes:
+      label: Rationale
+      description: Why are you recommending this decision?
+    validations:
+      required: true
+
+  - type: input
+    id: reviewer
+    attributes:
+      label: Reviewer name and credentials
+    validations:
+      required: true

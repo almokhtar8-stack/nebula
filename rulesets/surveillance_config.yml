@@ -1,0 +1,102 @@
+# ============================================================
+# Nebula Surveillance Configuration
+# Version: 0.1.0
+#
+# This file controls how the literature surveillance system
+# scores new findings. All thresholds should be reviewed by
+# your genetic counselor before the first production run.
+#
+# PHILOSOPHY: When in doubt, be conservative. It is better
+# to miss a weak candidate than to flood the review queue
+# with noise that gets the counselor to stop reviewing.
+# ============================================================
+
+version: "0.1.0"
+
+# How often to run surveillance
+# These are suggestions — the actual schedule is set by your
+# cron job or cloud scheduler
+schedule:
+  pubmed_interval_days: 7       # weekly PubMed scan
+  gwas_catalog_interval_days: 30 # monthly GWAS Catalog scan
+  pgs_catalog_interval_days: 30  # monthly PGS Catalog scan
+
+# Evidence scoring thresholds
+thresholds:
+
+  strong_candidate:
+    # Minimum to flag as STRONG_CANDIDATE → requires genetic counselor review
+    min_sample_size: 50000           # at least 50k participants
+    min_replication_studies: 2       # at least 2 independent studies
+    max_p_value: 5.0e-8              # genome-wide significance
+    min_auto_score: 70               # internal score threshold
+
+  moderate_candidate:
+    # Minimum to flag as MODERATE_CANDIDATE → goes on watch list
+    min_sample_size: 10000
+    min_replication_studies: 1
+    max_p_value: 5.0e-8
+    min_auto_score: 40
+
+  # Keywords that suggest a paper contradicts existing evidence
+  # When found in a paper title or abstract for an already-whitelisted rsID,
+  # the candidate is flagged as CONTRADICTS_EXISTING regardless of score
+  contradiction:
+    null_replication_keywords:
+      - "did not replicate"
+      - "failed to replicate"
+      - "no significant association"
+      - "null result"
+      - "non-significant"
+      - "not replicated"
+      - "lack of replication"
+      - "could not confirm"
+      - "no evidence of association"
+      - "absence of association"
+
+# AI summarisation settings
+# Requires ANTHROPIC_API_KEY environment variable
+ai_summarisation:
+  enabled: false                    # set to true when API key is configured
+  max_papers_per_candidate: 3       # cap to control API costs
+  only_for_signals:                 # only summarise these signal types
+    - strong_candidate
+    - contradicts
+
+# Notification settings
+# In production, replace with your actual notification mechanism
+notifications:
+  # Write a human-readable notification file after each run
+  write_notification_file: true
+  notification_file: "out/surveillance_notification.txt"
+
+  # Email settings (optional — configure SMTP in environment)
+  email:
+    enabled: false
+    to: []                          # ["counselor@nebula.bio", "you@nebula.bio"]
+    subject_prefix: "[Nebula Surveillance]"
+
+# PGS Catalog tracking
+# These are the model IDs currently used in the pipeline
+# New models from PGS Catalog will be flagged for comparison
+pgs_catalog:
+  known_model_ids:
+    CAD:  []    # add actual PGS IDs when you switch to real weights
+    T2D:  []
+    BrCa: []
+    PrCa: []
+
+# Traits to scan for NEW variants (beyond current whitelist)
+# The system will search GWAS Catalog for associations with these
+# traits and flag any significant novel variants not yet in the whitelist
+new_variant_discovery:
+  enabled: false   # enable in Phase 2 when knowledge base team is in place
+  traits:
+    - "caffeine consumption"
+    - "lactose intolerance"
+    - "folate metabolism"
+    - "coronary artery disease"
+    - "type 2 diabetes"
+    - "body mass index"
+    - "sleep duration"
+    - "chronotype"

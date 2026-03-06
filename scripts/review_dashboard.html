@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nebula — Surveillance Review Queue</title>
+  <style>
+    :root {
+      --bg: #0a0e1a;
+      --surface: #111827;
+      --surface2: #1a2235;
+      --border: #1e2d45;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --accent: #3b82f6;
+      --green: #10b981;
+      --yellow: #f59e0b;
+      --red: #ef4444;
+      --purple: #8b5cf6;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .logo {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .logo span { color: var(--muted); font-size: 13px; font-weight: 400; margin-left: 8px; }
+
+    .header-actions { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+
+    .upload-btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .upload-btn:hover { background: #2563eb; }
+
+    #file-input { display: none; }
+
+    main { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+    /* Stats row */
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 24px; }
+
+    .stat {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .stat-value { font-size: 28px; font-weight: 700; line-height: 1; }
+    .stat-label { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .stat.urgent .stat-value { color: var(--red); }
+    .stat.strong .stat-value { color: var(--green); }
+    .stat.moderate .stat-value { color: var(--yellow); }
+    .stat.approved .stat-value { color: var(--purple); }
+
+    /* Filters */
+    .filters {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .filter-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 14px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.15s;
+    }
+    .filter-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+    .filter-btn:hover:not(.active) { border-color: var(--accent); }
+
+    /* Cards */
+    .card-list { display: flex; flex-direction: column; gap: 12px; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      transition: border-color 0.15s;
+    }
+    .card:hover { border-color: #2a4070; }
+    .card.contradiction { border-left: 3px solid var(--red); }
+    .card.strong_candidate { border-left: 3px solid var(--green); }
+    .card.moderate_candidate { border-left: 3px solid var(--yellow); }
+    .card.approved { border-left: 3px solid var(--purple); opacity: 0.6; }
+    .card.rejected { border-left: 3px solid var(--muted); opacity: 0.4; }
+
+    .card-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+
+    .signal-badge {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+    .signal-badge.strong_candidate { background: rgba(16,185,129,0.15); color: var(--green); }
+    .signal-badge.moderate_candidate { background: rgba(245,158,11,0.15); color: var(--yellow); }
+    .signal-badge.contradicts { background: rgba(239,68,68,0.15); color: var(--red); }
+    .signal-badge.approved { background: rgba(139,92,246,0.15); color: var(--purple); }
+    .signal-badge.rejected { background: rgba(100,116,139,0.15); color: var(--muted); }
+
+    .card-title { font-size: 17px; font-weight: 600; }
+    .card-subtitle { font-size: 13px; color: var(--muted); margin-top: 2px; }
+    .score-pill {
+      margin-left: auto;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: var(--surface2);
+      white-space: nowrap;
+    }
+
+    .card-meta {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .meta-item { font-size: 12px; color: var(--muted); }
+    .meta-item strong { color: var(--text); font-weight: 500; }
+    .meta-item.warning { color: var(--red); }
+
+    .evidence-list { margin-bottom: 14px; }
+    .evidence-item {
+      font-size: 12px;
+      color: var(--muted);
+      padding: 3px 0;
+      display: flex;
+      gap: 6px;
+    }
+    .evidence-item::before { content: "•"; color: var(--accent); flex-shrink: 0; }
+
+    .ai-summary {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 14px;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .ai-summary-label { font-size: 11px; color: var(--accent); font-weight: 600; margin-bottom: 6px; letter-spacing: 0.5px; }
+
+    .papers {
+      margin-bottom: 14px;
+    }
+    .paper-link {
+      display: block;
+      font-size: 12px;
+      color: var(--accent);
+      text-decoration: none;
+      padding: 2px 0;
+    }
+    .paper-link:hover { text-decoration: underline; }
+
+    .card-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+    .btn {
+      border: none;
+      padding: 7px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .btn-approve { background: rgba(16,185,129,0.15); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+    .btn-approve:hover { background: rgba(16,185,129,0.25); }
+    .btn-reject { background: rgba(239,68,68,0.10); color: var(--red); border: 1px solid rgba(239,68,68,0.25); }
+    .btn-reject:hover { background: rgba(239,68,68,0.2); }
+    .btn-watch { background: rgba(245,158,11,0.10); color: var(--yellow); border: 1px solid rgba(245,158,11,0.25); }
+    .btn-watch:hover { background: rgba(245,158,11,0.2); }
+
+    .candidate-id { font-family: monospace; font-size: 11px; color: var(--muted); margin-left: auto; }
+
+    /* Empty state */
+    .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+    .empty-icon { font-size: 48px; margin-bottom: 12px; }
+
+    /* Load prompt */
+    #load-prompt {
+      text-align: center;
+      padding: 80px 20px;
+    }
+    #load-prompt h2 { font-size: 22px; font-weight: 600; margin-bottom: 8px; }
+    #load-prompt p { color: var(--muted); margin-bottom: 24px; }
+
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 40px;
+      cursor: pointer;
+      transition: border-color 0.15s;
+      max-width: 400px;
+      margin: 0 auto;
+    }
+    .drop-zone:hover, .drop-zone.drag-over { border-color: var(--accent); }
+    .drop-zone-icon { font-size: 36px; margin-bottom: 12px; }
+    .drop-zone-text { color: var(--muted); font-size: 13px; }
+
+    /* Notification banner */
+    .banner {
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .banner.danger { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; }
+    .banner.info { background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); color: #93c5fd; }
+
+    /* Instructions */
+    .instructions {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-bottom: 20px;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+    .instructions strong { color: var(--text); }
+    code {
+      background: var(--bg);
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+      color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">nebula <span>surveillance review</span></div>
+  <div class="header-actions">
+    <span id="queue-path-label" style="font-size:12px;color:var(--muted)"></span>
+    <button class="upload-btn" onclick="document.getElementById('file-input').click()">
+      Load Queue JSON
+    </button>
+    <input type="file" id="file-input" accept=".json" />
+  </div>
+</header>
+
+<main>
+  <div id="load-prompt">
+    <h2>Load your surveillance queue</h2>
+    <p>Open <code>out/surveillance_queue.json</code> from your Nebula project</p>
+    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+      <div class="drop-zone-icon">📂</div>
+      <div style="font-weight:600;margin-bottom:6px;">Click to open file</div>
+      <div class="drop-zone-text">or drag and drop surveillance_queue.json here</div>
+    </div>
+    <p style="margin-top:20px;font-size:12px;color:var(--muted)">
+      This dashboard runs entirely in your browser. No data is uploaded anywhere.
+    </p>
+  </div>
+
+  <div id="dashboard" style="display:none">
+    <div id="banners"></div>
+
+    <div class="instructions">
+      <strong>How to use this dashboard:</strong>
+      Review each candidate below. For each one, check the evidence signals and papers,
+      then click <strong>Approve</strong> (to add to whitelist consideration),
+      <strong>Reject</strong> (insufficient evidence), or <strong>Watch</strong>
+      (revisit in 6 months). Copy the CLI commands shown to record your decision in the queue file.
+      <br><br>
+      <strong>Contradictions are urgent</strong> — they mean new evidence conflicts with something
+      already in your product. These must be resolved before the next user report is generated.
+    </div>
+
+    <div class="stats" id="stats"></div>
+    <div class="filters" id="filters"></div>
+    <div class="card-list" id="card-list"></div>
+  </div>
+</main>
+
+<script>
+let queue = null;
+let activeFilter = 'pending';
+
+// File input
+document.getElementById('file-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (file) loadFile(file);
+});
+
+// Drag and drop
+const dropZone = document.getElementById('drop-zone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) loadFile(file);
+});
+
+function loadFile(file) {
+  document.getElementById('queue-path-label').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      queue = JSON.parse(e.target.result);
+      renderDashboard();
+    } catch (err) {
+      alert('Could not parse JSON: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function renderDashboard() {
+  document.getElementById('load-prompt').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+
+  renderBanners();
+  renderStats();
+  renderFilters();
+  renderCards();
+}
+
+function renderBanners() {
+  const banners = document.getElementById('banners');
+  banners.innerHTML = '';
+  const contradictions = queue.candidates.filter(c => c.contradicts_existing && c.review_status === 'pending');
+  if (contradictions.length > 0) {
+    banners.innerHTML += `
+      <div class="banner danger">
+        ⚠ ${contradictions.length} contradiction(s) require urgent review —
+        these may affect currently active user reports.
+      </div>`;
+  }
+  const strong = queue.candidates.filter(c => c.signal === 'strong_candidate' && c.review_status === 'pending');
+  if (strong.length > 0) {
+    banners.innerHTML += `
+      <div class="banner info">
+        ★ ${strong.length} strong candidate(s) pending genetic counselor review.
+      </div>`;
+  }
+}
+
+function renderStats() {
+  const c = queue.candidates;
+  const stats = [
+    { label: 'Total candidates', value: c.length },
+    { label: 'Pending review', value: c.filter(x => x.review_status === 'pending').length },
+    { label: 'Contradictions', value: c.filter(x => x.contradicts_existing).length, cls: 'urgent' },
+    { label: 'Strong candidates', value: c.filter(x => x.signal === 'strong_candidate' && x.review_status === 'pending').length, cls: 'strong' },
+    { label: 'Moderate', value: c.filter(x => x.signal === 'moderate_candidate' && x.review_status === 'pending').length, cls: 'moderate' },
+    { label: 'Approved', value: c.filter(x => x.review_status === 'approved').length, cls: 'approved' },
+    { label: 'Rejected', value: c.filter(x => x.review_status === 'rejected').length },
+    { label: 'Runs completed', value: (queue.run_history || []).length },
+  ];
+  document.getElementById('stats').innerHTML = stats.map(s =>
+    `<div class="stat ${s.cls || ''}">
+      <div class="stat-value">${s.value}</div>
+      <div class="stat-label">${s.label}</div>
+    </div>`
+  ).join('');
+}
+
+function renderFilters() {
+  const filters = [
+    { id: 'pending', label: 'All pending' },
+    { id: 'contradicts', label: '⚠ Contradictions' },
+    { id: 'strong_candidate', label: '★ Strong' },
+    { id: 'moderate_candidate', label: 'Moderate' },
+    { id: 'approved', label: 'Approved' },
+    { id: 'rejected', label: 'Rejected' },
+    { id: 'all', label: 'All' },
+  ];
+  document.getElementById('filters').innerHTML = filters.map(f =>
+    `<button class="filter-btn ${activeFilter === f.id ? 'active' : ''}"
+      onclick="setFilter('${f.id}')">${f.label}</button>`
+  ).join('');
+}
+
+function setFilter(id) {
+  activeFilter = id;
+  renderFilters();
+  renderCards();
+}
+
+function filteredCandidates() {
+  const c = queue.candidates;
+  if (activeFilter === 'pending') return c.filter(x => x.review_status === 'pending');
+  if (activeFilter === 'contradicts') return c.filter(x => x.contradicts_existing);
+  if (activeFilter === 'all') return c;
+  if (['approved', 'rejected', 'watching'].includes(activeFilter))
+    return c.filter(x => x.review_status === activeFilter);
+  return c.filter(x => x.signal === activeFilter);
+}
+
+function renderCards() {
+  const candidates = filteredCandidates();
+
+  // Sort: contradictions first, then strong, then moderate, then rest
+  const order = { contradicts: 0, strong_candidate: 1, moderate_candidate: 2 };
+  candidates.sort((a, b) => {
+    const ao = a.contradicts_existing ? -1 : (order[a.signal] ?? 3);
+    const bo = b.contradicts_existing ? -1 : (order[b.signal] ?? 3);
+    return ao - bo || b.auto_score - a.auto_score;
+  });
+
+  if (candidates.length === 0) {
+    document.getElementById('card-list').innerHTML = `
+      <div class="empty">
+        <div class="empty-icon">✓</div>
+        <div>No candidates match this filter</div>
+      </div>`;
+    return;
+  }
+
+  document.getElementById('card-list').innerHTML = candidates.map(c => renderCard(c)).join('');
+}
+
+function renderCard(c) {
+  const signalClass = c.contradicts_existing ? 'contradiction' : c.signal;
+  const signalLabel = c.contradicts_existing ? 'contradicts' : c.signal;
+
+  const metaItems = [
+    `<div class="meta-item"><strong>Gene:</strong> ${c.gene || 'unknown'}</div>`,
+    `<div class="meta-item"><strong>GWAS hits:</strong> ${(c.gwas_hits || []).length}</div>`,
+    `<div class="meta-item"><strong>Papers:</strong> ${(c.pubmed_papers || []).length}</div>`,
+    c.already_in_whitelist
+      ? `<div class="meta-item"><strong>Whitelist:</strong> Yes (${c.existing_evidence_grade || 'graded'})</div>`
+      : `<div class="meta-item"><strong>Whitelist:</strong> Not yet</div>`,
+    `<div class="meta-item"><strong>Found:</strong> ${(c.found_at || '').slice(0, 10)}</div>`,
+  ];
+
+  if (c.contradicts_existing) {
+    metaItems.push(`<div class="meta-item warning"><strong>⚠ CONTRADICTS EXISTING ENTRY</strong></div>`);
+  }
+
+  const reasons = (c.score_reasons || []).slice(0, 5).map(r =>
+    `<div class="evidence-item">${escapeHtml(r)}</div>`
+  ).join('');
+
+  const aiSection = c.ai_summary && c.ai_summary.three_sentence_summary
+    ? `<div class="ai-summary">
+        <div class="ai-summary-label">AI PAPER SUMMARY (for reference only — human review required)</div>
+        ${escapeHtml(c.ai_summary.three_sentence_summary)}
+      </div>`
+    : '';
+
+  const papers = (c.pubmed_papers || []).slice(0, 5).map(p =>
+    `<a class="paper-link" href="${p.url || 'https://pubmed.ncbi.nlm.nih.gov/' + p.pmid}" target="_blank">
+      ↗ ${escapeHtml(p.title || 'PMID ' + p.pmid)} (${p.journal || ''} ${p.pub_date || ''})
+    </a>`
+  ).join('');
+
+  const isPending = c.review_status === 'pending';
+  const actions = isPending
+    ? `<button class="btn btn-approve" onclick="showCLI('approve','${c.candidate_id}')">✓ Approve</button>
+       <button class="btn btn-reject" onclick="showCLI('reject','${c.candidate_id}')">✗ Reject</button>
+       <button class="btn btn-watch" onclick="showCLI('watch','${c.candidate_id}')">⏸ Watch</button>`
+    : `<span style="font-size:12px;color:var(--muted)">Status: ${c.review_status} — reviewed by ${c.reviewed_by || 'unknown'}</span>`;
+
+  return `
+    <div class="card ${signalClass}" id="card-${c.candidate_id}">
+      <div class="card-header">
+        <div>
+          <span class="signal-badge ${signalLabel}">${signalLabel.replace('_', ' ')}</span>
+          <div class="card-title" style="margin-top:8px">${escapeHtml(c.rsid)} — ${escapeHtml(c.trait)}</div>
+          <div class="card-subtitle">${escapeHtml(c.gene || '')} · ${c.source || ''}</div>
+        </div>
+        <div class="score-pill">${c.auto_score}/100</div>
+      </div>
+      <div class="card-meta">${metaItems.join('')}</div>
+      ${reasons ? `<div class="evidence-list">${reasons}</div>` : ''}
+      ${aiSection}
+      ${papers ? `<div class="papers">${papers}</div>` : ''}
+      <div class="card-actions">
+        ${actions}
+        <span class="candidate-id">${c.candidate_id}</span>
+      </div>
+    </div>`;
+}
+
+function showCLI(action, candidateId) {
+  const reviewer = prompt('Your name/identifier (for audit trail):');
+  if (!reviewer) return;
+  const notes = prompt('Notes (reason for decision):') || '';
+
+  let cmd;
+  if (action === 'watch') {
+    // Watch doesn't have a direct CLI command — show manual instruction
+    cmd = `# In surveillance_queue.json, set review_status to "watching" for:\n# ${candidateId}`;
+  } else {
+    cmd = `nebula surveillance ${action} \\\n  --id ${candidateId} \\\n  --reviewer "${reviewer}"${notes ? ' \\\n  --notes "' + notes + '"' : ''}`;
+  }
+
+  const box = document.createElement('div');
+  box.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1a2235;border:1px solid #2a4070;border-radius:12px;padding:24px;max-width:600px;width:90%;z-index:100';
+  box.innerHTML = `
+    <div style="font-weight:600;margin-bottom:12px">Run this CLI command to record your decision:</div>
+    <pre style="background:#0a0e1a;padding:14px;border-radius:8px;font-size:13px;overflow-x:auto;color:#93c5fd;line-height:1.6">${escapeHtml(cmd)}</pre>
+    <div style="color:#64748b;font-size:12px;margin-top:12px;margin-bottom:16px">
+      After running, reload the queue file to see the updated status.
+    </div>
+    <div style="display:flex;gap:8px">
+      <button onclick="navigator.clipboard.writeText(\`${cmd.replace(/`/g, '\\`')}\`).then(()=>alert('Copied!'))"
+        style="background:#3b82f6;color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer">
+        Copy command
+      </button>
+      <button onclick="this.closest('div[style*=fixed]').remove()"
+        style="background:transparent;color:#64748b;border:1px solid #1e2d45;padding:8px 16px;border-radius:6px;cursor:pointer">
+        Close
+      </button>
+    </div>`;
+  document.body.appendChild(box);
+
+  // Backdrop
+  const bd = document.createElement('div');
+  bd.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:99';
+  bd.onclick = () => { box.remove(); bd.remove(); };
+  document.body.insertBefore(bd, box);
+}
+
+function escapeHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+</script>
+</body>
+</html>

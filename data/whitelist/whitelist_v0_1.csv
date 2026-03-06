@@ -1,0 +1,52 @@
+rsid,gene,category,trait,risk_allele,ref_allele,evidence_grade,notes
+rs762551,CYP1A2,Caffeine,Caffeine metabolism speed,C,A,Strong,Fast(AA) vs slow(AC/CC) metabolizer
+rs4410790,AHR,Caffeine,Caffeine consumption tendency,C,T,Moderate,Higher habitual intake tendency
+rs5751876,ADORA2A,Caffeine,Caffeine sleep sensitivity,C,T,Moderate,Sleep disruption sensitivity
+rs671,ALDH2,Alcohol,Alcohol flush reaction,A,G,Strong,ALDH2*2 deficiency allele
+rs1229984,ADH1B,Alcohol,Alcohol metabolism speed,A,G,Strong,Faster ethanol conversion
+rs4988235,LCT,Lactose,Lactose persistence,T,C,Strong,T=non-persistence (intolerant tendency)
+rs1801133,MTHFR,B-Vitamins,Folate metabolism efficiency,T,C,Strong,C677T variant; T=reduced activity
+rs1801131,MTHFR,B-Vitamins,Folate metabolism secondary,C,A,Moderate,A1298C; compound effect with C677T
+rs602662,FUT2,B-Vitamins,Vitamin B12 absorption,A,G,Moderate,Non-secretor status
+rs1544410,BSMR,Vitamins,Vitamin D receptor,A,G,Moderate,BsmI polymorphism
+rs10741657,CYP2R1,Vitamins,Vitamin D synthesis,G,A,Strong,CYP2R1 25-hydroxylase variant
+rs2282679,GC,Vitamins,Vitamin D binding protein,T,C,Strong,GC/DBP reduced binding
+rs12785878,DHCR7,Vitamins,Vitamin D precursor synthesis,T,G,Strong,DHCR7 variant
+rs9939609,FTO,Nutrition,Appetite regulation,A,T,Strong,Most replicated obesity GWAS hit
+rs174546,FADS1,Nutrition,Omega-3 conversion efficiency,T,C,Strong,Reduced delta-5 desaturase activity
+rs1800562,HFE,Nutrition,Iron metabolism,A,G,Strong,HFE C282Y hemochromatosis risk
+rs1799945,HFE,Nutrition,Iron metabolism secondary,G,C,Moderate,HFE H63D; modifier variant
+rs4988458,PPARG,Nutrition,Fat metabolism tendency,C,T,Moderate,Pro12Ala variant
+rs2981582,FGFR2,Cancer,Breast cancer PRS sentinel,T,C,Strong,PRS training weight variant
+rs3803662,TOX3,Cancer,Breast cancer PRS sentinel,T,C,Strong,PRS training weight variant
+rs889312,MAP3K1,Cancer,Breast cancer PRS sentinel,C,A,Strong,PRS training weight variant
+rs1333049,CDKN2B-AS1,Cardiovascular,CAD PRS sentinel,C,G,Strong,PRS training weight variant
+rs10757278,CDKN2B-AS1,Cardiovascular,CAD PRS sentinel 2,G,A,Strong,PRS training weight variant
+rs2943634,ABO,Cardiovascular,CAD PRS sentinel 3,C,A,Strong,PRS training weight variant
+rs9982601,SMAD3,Cardiovascular,CAD PRS sentinel 4,C,T,Strong,PRS training weight variant
+rs7903146,TCF7L2,Metabolic,T2D PRS sentinel,T,C,Strong,Strongest T2D GWAS variant
+rs1111875,HHEX,Metabolic,T2D PRS sentinel 2,C,T,Strong,PRS training weight variant
+rs5219,KCNJ11,Metabolic,T2D PRS sentinel 3,T,C,Strong,E23K variant
+rs13266634,SLC30A8,Metabolic,T2D PRS sentinel 4,T,C,Strong,R325W variant
+rs1447295,8q24,Cancer,Prostate cancer PRS sentinel,A,C,Strong,PRS training weight variant
+rs16901979,8q24,Cancer,Prostate cancer PRS sentinel 2,A,C,Strong,PRS training weight variant
+rs6983267,8q24,Cancer,Prostate cancer PRS sentinel 3,G,T,Strong,PRS training weight variant
+rs1815739,ACTN3,Fitness,Muscle fiber type tendency,C,T,Strong,C=stop codon (XX=endurance); T=Arg (RR=power)
+rs12722,COL5A1,Fitness,Connective tissue / injury tendency,T,C,Moderate,Achilles tendinopathy association
+rs1800795,IL6,Fitness,Inflammatory response to exercise,G,C,Moderate,IL-6 -174 GG = higher post-exercise IL-6
+rs2304672,PER2,Sleep,Circadian period / chronotype,C,G,Moderate,Evening chronotype association
+rs1801260,CLOCK,Sleep,Circadian clock gene,T,C,Moderate,Evening preference association
+rs73598374,ADA,Sleep,Adenosine clearance / sleep depth,G,A,Moderate,Asp8Asn; slower adenosine clearance
+rs4149056,SLCO1B1,Pharmacogenomics,Statin myopathy risk,C,T,Strong,CPIC level A; CC = elevated simvastatin risk
+rs3918290,DPYD,Pharmacogenomics,Fluoropyrimidine toxicity,A,G,Strong,DPYD*2A; CPIC level A
+rs1057910,CYP2C9,Pharmacogenomics,CYP2C9 metabolizer status,C,A,Strong,*3 allele; reduced warfarin metabolism
+rs1799853,CYP2C9,Pharmacogenomics,CYP2C9 metabolizer secondary,T,C,Moderate,*2 allele
+rs4244285,CYP2C19,Pharmacogenomics,CYP2C19 metabolizer status,A,G,Strong,*2 allele; poor metabolizer
+rs12248560,CYP2C19,Pharmacogenomics,CYP2C19 rapid metabolizer,T,C,Moderate,*17 allele
+rs9923231,VKORC1,Pharmacogenomics,Warfarin sensitivity,T,C,Strong,Reduced VKORC1 expression
+rs2187668,HLA-DQ2,Gastrointestinal,Celiac disease predisposition,A,G,Strong,HLA-DQ2.5 proxy variant
+rs7454108,HLA-DQ8,Gastrointestinal,Celiac disease predisposition 2,T,C,Strong,HLA-DQ8 proxy variant
+rs7412,APOE,Cardiovascular,APOE genotype component,T,C,Strong,APOE e4 component (rs7412+rs429358)
+rs429358,APOE,Cardiovascular,APOE e4 allele,C,T,Strong,APOE e4 allele — informational only
+rs1800871,IL10,Immune,Anti-inflammatory cytokine,A,G,Moderate,IL-10 -819 polymorphism
+rs2234767,CD95,Immune,Apoptosis regulation,A,G,Moderate,FAS/CD95 variant

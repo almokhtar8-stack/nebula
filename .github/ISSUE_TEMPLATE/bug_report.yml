@@ -1,0 +1,72 @@
+name: Bug Report
+description: Report a pipeline error or incorrect output
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Before submitting:** Please do not include real VCF files, user data, 
+        or any personally identifiable information in this report.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - VCF ingestion / QC
+        - Whitelist extraction
+        - Rule engine
+        - PRS computation
+        - Report generation
+        - Literature surveillance
+        - CLI
+        - Tests / CI
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      placeholder: Describe the bug clearly.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Run command: nebula run --vcf ...
+        2. Error appears at step ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: |
+        Python version:
+        OS:
+        nebula version (from pyproject.toml):
+        Ruleset version:
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: data_safety
+    attributes:
+      label: Data safety confirmation
+      options:
+        - label: I have not included any real user VCF data or genetic information
+          required: true
+        - label: I have not included any API keys or secrets
+          required: true
