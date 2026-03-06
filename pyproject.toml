@@ -1,6 +1,6 @@
 [build-system]
 requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.backends.legacy:build"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "nebula"
@@ -15,6 +15,10 @@ dependencies = [
     # Surveillance system uses only stdlib for HTTP (urllib) —
     # no extra network libraries needed for MVP
 ]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["nebula*"]
 
 [project.scripts]
 nebula = "nebula.cli:cli"
