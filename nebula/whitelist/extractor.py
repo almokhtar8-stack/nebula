@@ -98,7 +98,7 @@ def extract_features(
     """
     Match VCF variants to whitelist entries.
     Returns GeneticFeature objects with:
-      - found_in_vcf=True only for variants present in the VCF
+      - found_in_vcf=True for all variants (absent in WGS = hom ref)
       - risk_allele_count computed from actual alleles vs whitelist risk allele
       - genotype as sorted allele string (e.g. "CT")
     """
@@ -115,18 +115,24 @@ def extract_features(
         vcf_var = vcf_by_rsid.get(rsid)
 
         if vcf_var is None:
-            # Not found in VCF — MISSING
+            # Absent from WGS VCF = homozygous reference (ref/ref).
+            # WGS only records sites that differ from reference — absence
+            # means 0 copies of the alt/risk allele, not missing data.
+            ref_allele  = entry.ref_allele or ""
+            risk_allele = entry.risk_allele or ""
+            hom_ref_alleles  = [ref_allele, ref_allele] if ref_allele else []
+            hom_ref_genotype = ref_allele * 2 if ref_allele else ""
             features.append(GeneticFeature(
                 rsid=rsid,
                 gene=entry.gene,
                 category=entry.category,
                 trait=entry.trait,
-                genotype="",
-                alleles=[],
-                risk_allele=entry.risk_allele,
+                genotype=hom_ref_genotype,
+                alleles=hom_ref_alleles,
+                risk_allele=risk_allele,
                 risk_allele_count=0,
                 evidence_grade=entry.evidence_grade,
-                found_in_vcf=False,
+                found_in_vcf=True,   # treat as known homozygous reference
             ))
         else:
             alleles     = vcf_var.gt_alleles    # e.g. ["G", "A"] from VCF
