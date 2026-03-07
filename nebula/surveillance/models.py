@@ -8,7 +8,7 @@ enters the product without human approval.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
@@ -137,8 +137,8 @@ class SurveillanceCandidate(BaseModel):
     contradicts_existing: bool = False
 
     # Timestamps
-    found_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
-    last_updated: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    found_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    last_updated: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     # Review
     review_status: ReviewStatus = ReviewStatus.PENDING
@@ -174,7 +174,7 @@ class SurveillanceRun(BaseModel):
 class ReviewQueue(BaseModel):
     """The full pending review queue, persisted between runs."""
     schema_version: str = "1.0"
-    last_updated: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    last_updated: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     candidates: list[SurveillanceCandidate] = Field(default_factory=list)
     run_history: list[SurveillanceRun] = Field(default_factory=list)
 

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from nebula.surveillance.models import (
@@ -49,7 +49,7 @@ def load_queue(queue_path: Path) -> ReviewQueue:
 def save_queue(queue: ReviewQueue, queue_path: Path) -> None:
     """Save queue to disk atomically (write to .tmp then rename)."""
     queue_path.parent.mkdir(parents=True, exist_ok=True)
-    queue.last_updated = datetime.utcnow().isoformat()
+    queue.last_updated = datetime.now(timezone.utc).isoformat()
 
     tmp = queue_path.with_suffix(".tmp")
     try:
@@ -130,7 +130,7 @@ def approve_candidate(
         if candidate.candidate_id == candidate_id:
             candidate.review_status = ReviewStatus.APPROVED
             candidate.reviewer_notes = notes
-            candidate.reviewed_at = datetime.utcnow().isoformat()
+            candidate.reviewed_at = datetime.now(timezone.utc).isoformat()
             candidate.reviewed_by = reviewer
             return True
     return False
@@ -147,7 +147,7 @@ def reject_candidate(
         if candidate.candidate_id == candidate_id:
             candidate.review_status = ReviewStatus.REJECTED
             candidate.reviewer_notes = notes
-            candidate.reviewed_at = datetime.utcnow().isoformat()
+            candidate.reviewed_at = datetime.now(timezone.utc).isoformat()
             candidate.reviewed_by = reviewer
             return True
     return False
