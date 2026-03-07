@@ -438,14 +438,14 @@ footer{border-top:1px solid var(--border);padding:28px 48px;display:flex;align-i
 <section id="cta">
   <div class="cta-inner">
     <img id="cta-logo" class="cta-logo" alt="Nebula" src=""/>
-    <h2 class="cta-title">Built in public.<br>Run it yourself.</h2>
-    <p class="cta-sub">The full pipeline — VCF parsing, rule engine, PRS computation, PDF renderer, questionnaire CLI, surveillance system — is on GitHub. MIT licensed.</p>
+    <h2 class="cta-title">A precision wellness<br>platform built from scratch.</h2>
+    <p class="cta-sub">VCF parsing, deterministic rule engine, PRS computation, branded PDF renderer, questionnaire CLI, and weekly surveillance pipeline — all designed and built as a proprietary MVP. Source available on GitHub for review.</p>
     <div class="btn-row">
-      <a href="https://github.com/almokhtar8-stack/nebula" target="_blank" class="btn-p">STAR ON GITHUB ★</a>
-      <a href="#demo" class="btn-s">EXPLORE DEMO</a>
+      <a href="https://github.com/almokhtar8-stack/nebula" target="_blank" class="btn-p">VIEW ON GITHUB ↗</a>
+      <a href="#demo" class="btn-s">EXPLORE DEMO REPORT</a>
     </div>
     <div class="code-block" onclick="copyCmd()">
-      <span id="cmd-txt">git clone https://github.com/almokhtar8-stack/nebula &amp;&amp; pip install -e ".[dev]" &amp;&amp; pytest</span>
+      <span id="cmd-txt">github.com/almokhtar8-stack/nebula</span>
       <span>⎘</span>
     </div>
   </div>
@@ -458,7 +458,7 @@ footer{border-top:1px solid var(--border);padding:28px 48px;display:flex;align-i
     This platform is for research and development purposes only. It does not constitute medical advice and must not be used for clinical decision-making.
     Genetic predisposition is not destiny. All findings require clinical validation by a qualified healthcare professional.
     Polygenic risk scores are computed from limited variant panels optimised for European ancestry — accuracy varies for other populations.
-    © 2026 Nebula Precision Wellness. Built by Almokhtar Aljarodi.
+    © 2026 Nebula Precision Wellness. All rights reserved. Proprietary MVP — not open source.
   </div>
 </footer>
 
@@ -811,9 +811,9 @@ function showTab(name, btn) {
 // ── COPY ───────────────────────────────────────────────────────────────────
 function copyCmd() {
   var txt = document.getElementById("cmd-txt");
-  navigator.clipboard.writeText("git clone https://github.com/almokhtar8-stack/nebula && pip install -e \".[dev]\" && pytest").then(function() {
+  navigator.clipboard.writeText("github.com/almokhtar8-stack/nebula").then(function() {
     txt.textContent = "Copied!";
-    setTimeout(function() { txt.textContent = 'git clone https://github.com/almokhtar8-stack/nebula && pip install -e ".[dev]" && pytest'; }, 2000);
+    setTimeout(function() { txt.textContent = "github.com/almokhtar8-stack/nebula"; }, 2000);
   });
 }
 </script>
