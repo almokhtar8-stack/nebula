@@ -1,14 +1,22 @@
 #!/usr/bin/env python3
 """
 scripts/fetch_candidates.py
-Automated surveillance feed — GWAS Catalog, ClinVar, PGS Catalog.
+───────────────────────────
+Automated weekly surveillance — finds new variant candidates from:
+  1. GWAS Catalog  — genome-wide significant associations
+  2. ClinVar       — pathogenic / likely-pathogenic variants
+  3. PGS Catalog   — validated polygenic score models
+
+Covers all Nebula wellness domains:
+  Fitness · Nutrition · Sleep · Recovery · Pharmacogenomics · Health Risk
 
 Usage:
     python scripts/fetch_candidates.py --dry-run
     python scripts/fetch_candidates.py --sources gwas clinvar pgs
+    python scripts/fetch_candidates.py --sources gwas --category Fitness
     python scripts/fetch_candidates.py --queue-path data/surveillance_queue.json
 
-Exit: 0=clean, 1=strong candidates found, 2=API error
+Exit: 0 = clean,  1 = strong candidates found,  2 = API error
 """
 from __future__ import annotations
 
@@ -23,9 +31,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlencode
 from urllib.request import urlopen, Request
-from urllib.error import HTTPError, URLError
+from urllib.error import HTTPError
 
-# ── Load .env ─────────────────────────────────────────────────────────────────
+
 def _load_env(root: Path) -> None:
     env = root / ".env"
     if not env.exists():
@@ -36,11 +44,12 @@ def _load_env(root: Path) -> None:
             k, v = line.split("=", 1)
             os.environ.setdefault(k.strip(), v.strip())
 
+
 _load_env(Path(__file__).parent.parent)
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from nebula.surveillance.models import (
-    DataSource, EvidenceSignal, GWASHit, PubMedPaper, SurveillanceCandidate,
+    DataSource, EvidenceSignal, GWASHit, SurveillanceCandidate,
 )
 from nebula.surveillance.scorer import score_candidate
 from nebula.surveillance.queue import load_queue, save_queue, merge_candidates
@@ -58,40 +67,115 @@ NCBI_BASE    = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 GWAS_BASE    = "https://www.ebi.ac.uk/gwas/rest/api"
 PGS_BASE     = "https://www.pgscatalog.org/rest"
 
-# Traits to watch — (efo_trait_string, short_label)
-GWAS_TRAITS = [
-    ("type 2 diabetes mellitus",  "T2D"),
-    ("coronary artery disease",   "CAD"),
-    ("breast carcinoma",          "BrCa"),
-    ("celiac disease",            "Celiac"),
-    ("chronotype",                "Sleep"),
-    ("body mass index",           "BMI"),
-    ("vitamin D measurement",     "VitD"),
-    ("lactase persistence",       "LCT"),
-    ("prostate carcinoma",        "PrCa"),
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TRAIT CONFIGURATION — add traits here, no Python logic changes needed
+# Format: (efo_trait_string, short_label, nebula_category)
+# ══════════════════════════════════════════════════════════════════════════════
+
+GWAS_TRAITS: list[tuple[str, str, str]] = [
+
+    # ── FITNESS ───────────────────────────────────────────────────────────────
+    ("physical activity measurement",       "PhysActivity",  "Fitness"),
+    ("muscle strength",                     "MuscleStr",     "Fitness"),
+    ("hand grip strength",                  "GripStrength",  "Fitness"),
+    ("exercise tolerance",                  "ExTolerance",   "Fitness"),
+    ("physical fitness",                    "PhysFitness",   "Fitness"),
+    ("lean body mass",                      "LeanMass",      "Fitness"),
+    ("tendon injury",                       "TendonInjury",  "Fitness"),
+    ("anterior cruciate ligament injury",   "ACLInjury",     "Fitness"),
+
+    # ── NUTRITION ─────────────────────────────────────────────────────────────
+    ("caffeine consumption",                "Caffeine",      "Nutrition"),
+    ("alcohol consumption",                 "Alcohol",       "Nutrition"),
+    ("iron measurement",                    "Iron",          "Nutrition"),
+    ("folate measurement",                  "Folate",        "Nutrition"),
+    ("omega-3 fatty acid measurement",      "Omega3",        "Nutrition"),
+    ("vitamin D measurement",               "VitD",          "Nutrition"),
+    ("vitamin B12 measurement",             "VitB12",        "Nutrition"),
+    ("lactase persistence",                 "LCT",           "Nutrition"),
+    ("sugar intake",                        "Sugar",         "Nutrition"),
+    ("dietary fibre intake",                "Fibre",         "Nutrition"),
+    ("magnesium measurement",               "Magnesium",     "Nutrition"),
+    ("choline measurement",                 "Choline",       "Nutrition"),
+    ("body mass index",                     "BMI",           "Nutrition"),
+    ("waist-hip ratio",                     "WHR",           "Nutrition"),
+
+    # ── SLEEP & CIRCADIAN ─────────────────────────────────────────────────────
+    ("chronotype",                          "Chronotype",    "Sleep"),
+    ("sleep duration",                      "SleepDuration", "Sleep"),
+    ("insomnia",                            "Insomnia",      "Sleep"),
+    ("excessive daytime sleepiness",        "Sleepiness",    "Sleep"),
+    ("restless legs syndrome",              "RLS",           "Sleep"),
+    ("sleep apnea",                         "SleepApnea",    "Sleep"),
+
+    # ── RECOVERY ─────────────────────────────────────────────────────────────
+    ("inflammatory marker measurement",     "Inflammation",  "Recovery"),
+    ("cortisol measurement",                "Cortisol",      "Recovery"),
+    ("heart rate variability",              "HRV",           "Recovery"),
+
+    # ── HEALTH RISK ───────────────────────────────────────────────────────────
+    ("type 2 diabetes mellitus",            "T2D",           "Health Risk"),
+    ("coronary artery disease",             "CAD",           "Health Risk"),
+    ("hypertension",                        "HTN",           "Health Risk"),
+    ("celiac disease",                      "Celiac",        "Health Risk"),
+    ("obesity",                             "Obesity",       "Health Risk"),
+    ("non-alcoholic fatty liver disease",   "NAFLD",         "Health Risk"),
+    ("atrial fibrillation",                 "AFib",          "Health Risk"),
+    ("gout",                                "Gout",          "Health Risk"),
+    ("breast carcinoma",                    "BrCa",          "Health Risk"),
+    ("prostate carcinoma",                  "PrCa",          "Health Risk"),
+    ("colorectal cancer",                   "CRC",           "Health Risk"),
+
+    # ── PHARMACOGENOMICS ─────────────────────────────────────────────────────
+    ("drug response",                       "PGx",           "Pharmacogenomics"),
+    ("statin response",                     "StatinRx",      "Pharmacogenomics"),
+    ("warfarin response",                   "WarfarinRx",    "Pharmacogenomics"),
+    ("clopidogrel response",                "CYP2C19rx",     "Pharmacogenomics"),
 ]
 
-CLINVAR_TERMS = [
-    ("hemochromatosis",       "Iron overload / HFE"),
-    ("lactose intolerance",   "Lactose intolerance"),
-    ("MTHFR",                 "Folate metabolism"),
-    ("CYP1A2",                "Caffeine metabolism"),
-    ("DPYD",                  "Fluoropyrimidine toxicity"),
-    ("SLCO1B1",               "Statin myopathy"),
-    ("vitamin D deficiency",  "Vitamin D"),
-    ("celiac disease",        "Celiac / HLA"),
-    ("COL5A1",                "Connective tissue"),
-    ("FADS1",                 "Omega-3 metabolism"),
+CLINVAR_TERMS: list[tuple[str, str, str]] = [
+    # Pharmacogenomics — highest actionability
+    ("DPYD",        "Fluoropyrimidine toxicity",  "Pharmacogenomics"),
+    ("SLCO1B1",     "Statin myopathy",            "Pharmacogenomics"),
+    ("CYP2C19",     "Clopidogrel / PPI response", "Pharmacogenomics"),
+    ("CYP2D6",      "Opioid / antidepressant Rx", "Pharmacogenomics"),
+    ("TPMT",        "Thiopurine toxicity",        "Pharmacogenomics"),
+    ("NUDT15",      "Thiopurine toxicity",        "Pharmacogenomics"),
+    ("G6PD",        "G6PD deficiency",            "Pharmacogenomics"),
+    # Nutrition
+    ("HFE",         "Hemochromatosis / iron",     "Nutrition"),
+    ("MTHFR",       "Folate metabolism",          "Nutrition"),
+    ("CYP1A2",      "Caffeine metabolism",        "Nutrition"),
+    ("FADS1",       "Omega-3 metabolism",         "Nutrition"),
+    ("VDR",         "Vitamin D receptor",         "Nutrition"),
+    # Fitness
+    ("COL5A1",      "Connective tissue / injury", "Fitness"),
+    ("COL1A1",      "Collagen / bone",            "Fitness"),
+    ("ACTN3",       "Muscle fiber type",          "Fitness"),
+    # Health risk
+    ("HLA-DQ",      "Celiac / HLA",               "Health Risk"),
+    # Sleep
+    ("CLOCK",       "Circadian rhythm",           "Sleep"),
+    ("CRY1",        "Delayed sleep phase",        "Sleep"),
 ]
 
-PGS_TRAITS = {
-    "CAD":  ["EFO_0000270"],
-    "T2D":  ["EFO_0001360"],
-    "BrCa": ["EFO_0000305"],
-    "PrCa": ["EFO_0001663"],
+PGS_TRAITS: dict[str, list[str]] = {
+    "CAD":    ["EFO_0000270", "EFO_0001645"],
+    "T2D":    ["EFO_0001360", "MONDO_0005148"],
+    "BrCa":   ["EFO_0000305"],
+    "PrCa":   ["EFO_0001663"],
+    "BMI":    ["EFO_0004340"],
+    "Celiac": ["EFO_0001060"],
+    "AFib":   ["EFO_0000275"],
+    "CRC":    ["EFO_0005842"],
 }
 
-# ── HTTP ──────────────────────────────────────────────────────────────────────
+
+# ══════════════════════════════════════════════════════════════════════════════
+# HTTP
+# ══════════════════════════════════════════════════════════════════════════════
+
 def _get(url: str, params: dict | None = None, retries: int = 3) -> dict | None:
     if params:
         url = f"{url}?{urlencode(params)}"
@@ -114,22 +198,28 @@ def _get(url: str, params: dict | None = None, retries: int = 3) -> dict | None:
             time.sleep(1)
     return None
 
-def _ncbi(endpoint: str, params: dict) -> dict | None:
-    if NCBI_API_KEY:
-        params["api_key"] = NCBI_API_KEY
-    params["retmode"] = "json"
-    result = _get(f"{NCBI_BASE}/{endpoint}", params)
-    time.sleep(0.12 if NCBI_API_KEY else 0.4)
-    return result
 
-# ── GWAS Catalog ──────────────────────────────────────────────────────────────
+def _ncbi(ep: str, p: dict) -> dict | None:
+    if NCBI_API_KEY:
+        p["api_key"] = NCBI_API_KEY
+    p["retmode"] = "json"
+    r = _get(f"{NCBI_BASE}/{ep}", p)
+    time.sleep(0.12 if NCBI_API_KEY else 0.4)
+    return r
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SOURCE 1 — GWAS CATALOG
+# ══════════════════════════════════════════════════════════════════════════════
+
 def fetch_gwas(whitelist: dict) -> list[SurveillanceCandidate]:
-    logger.info("=== GWAS Catalog ===")
-    candidates = []
+    logger.info("=== GWAS Catalog (%d traits) ===", len(GWAS_TRAITS))
+    candidates: list[SurveillanceCandidate] = []
     seen: set[str] = set()
 
-    for trait_name, label in GWAS_TRAITS:
-        logger.info("  %s", label)
+    for trait_name, label, category in GWAS_TRAITS:
+        logger.info("  [%s] %s", category, label)
+
         data = _get(
             f"{GWAS_BASE}/singleNucleotidePolymorphisms/search/findByEfoTrait",
             {"efoTrait": trait_name, "size": 50, "page": 0},
@@ -138,6 +228,9 @@ def fetch_gwas(whitelist: dict) -> list[SurveillanceCandidate]:
             continue
 
         snps = data.get("_embedded", {}).get("singleNucleotidePolymorphisms", [])
+        if not snps:
+            logger.info("    0 SNPs")
+            continue
         logger.info("    %d SNPs", len(snps))
 
         for snp in snps[:25]:
@@ -146,7 +239,6 @@ def fetch_gwas(whitelist: dict) -> list[SurveillanceCandidate]:
                 continue
             seen.add(rsid)
 
-            # Get associations for p-value
             assoc_data = _get(
                 f"{GWAS_BASE}/singleNucleotidePolymorphisms/{rsid}/associations",
                 {"size": 20},
@@ -156,43 +248,30 @@ def fetch_gwas(whitelist: dict) -> list[SurveillanceCandidate]:
                 continue
 
             assocs = assoc_data.get("_embedded", {}).get("associations", [])
-            if not assocs:
-                continue
-
-            # Build GWASHit list — one per association
             hits: list[GWASHit] = []
+
             for a in assocs:
                 try:
-                    mantissa = float(a.get("pvalueMantissa") or 1)
-                    exponent = int(a.get("pvalueExponent") or 0)
-                    pval = mantissa * (10 ** exponent)
+                    pval = float(a.get("pvalueMantissa") or 1) * (
+                        10 ** int(a.get("pvalueExponent") or 0)
+                    )
                     if pval > 5e-8:
                         continue
-
-                    gene = ""
-                    for gc in snp.get("genomicContexts", []):
-                        g = gc.get("gene", {})
-                        if g.get("geneName"):
-                            gene = g["geneName"]
-                            break
-
-                    effect_allele = ""
-                    for locus in a.get("loci", []):
-                        for ra in locus.get("strongestRiskAlleles", []):
-                            raw = ra.get("riskAlleleName", "")
-                            if "-" in raw:
-                                effect_allele = raw.split("-")[1]
-                        break
-
+                    gene = next(
+                        (gc.get("gene", {}).get("geneName", "")
+                         for gc in snp.get("genomicContexts", [])
+                         if gc.get("gene", {}).get("geneName")),
+                        "",
+                    )
                     or_val = a.get("orPerCopyNum")
-                    beta = a.get("betaNum")
-
+                    beta   = a.get("betaNum")
                     hits.append(GWASHit(
                         rsid=rsid,
                         trait=trait_name,
                         p_value=pval,
-                        beta_or_or=float(or_val) if or_val else (float(beta) if beta else None),
-                        effect_allele=effect_allele,
+                        beta_or_or=(
+                            float(or_val) if or_val else (float(beta) if beta else None)
+                        ),
                         sample_size=0,
                         mapped_gene=gene,
                     ))
@@ -202,11 +281,10 @@ def fetch_gwas(whitelist: dict) -> list[SurveillanceCandidate]:
             if not hits:
                 continue
 
-            gene = hits[0].mapped_gene if hits else ""
             scored = score_candidate(
                 rsid=rsid,
-                trait=trait_name,
-                gene=gene,
+                trait=f"[{category}] {trait_name}",
+                gene=hits[0].mapped_gene,
                 gwas_hits=hits,
                 papers=[],
                 existing_whitelist=whitelist,
@@ -215,23 +293,25 @@ def fetch_gwas(whitelist: dict) -> list[SurveillanceCandidate]:
 
             if scored.signal not in (EvidenceSignal.WEAK, EvidenceSignal.INSUFFICIENT_DATA):
                 candidates.append(scored)
-                tag = " [IN WHITELIST]" if scored.already_in_whitelist else ""
-                logger.info("    + %s  %s  score=%d  %s%s",
-                            rsid, trait_name[:35], scored.auto_score,
-                            scored.signal.value, tag)
+                logger.info("    + %s  score=%d  %s%s",
+                            rsid, scored.auto_score, scored.signal.value,
+                            "  [IN WHITELIST]" if scored.already_in_whitelist else "")
 
     logger.info("GWAS: %d candidates", len(candidates))
     return candidates
 
 
-# ── ClinVar ───────────────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# SOURCE 2 — CLINVAR
+# ══════════════════════════════════════════════════════════════════════════════
+
 def fetch_clinvar(whitelist: dict) -> list[SurveillanceCandidate]:
-    logger.info("=== ClinVar ===")
-    candidates = []
+    logger.info("=== ClinVar (%d terms) ===", len(CLINVAR_TERMS))
+    candidates: list[SurveillanceCandidate] = []
     seen: set[str] = set()
 
-    for term, label in CLINVAR_TERMS:
-        logger.info("  %s", label)
+    for term, label, category in CLINVAR_TERMS:
+        logger.info("  [%s] %s", category, label)
 
         search = _ncbi("esearch.fcgi", {
             "db": "clinvar",
@@ -250,46 +330,33 @@ def fetch_clinvar(whitelist: dict) -> list[SurveillanceCandidate]:
             continue
         logger.info("    %d records", len(ids))
 
-        summary = _ncbi("esummary.fcgi", {
-            "db": "clinvar",
-            "id": ",".join(ids[:15]),
-        })
+        summary = _ncbi("esummary.fcgi", {"db": "clinvar", "id": ",".join(ids[:15])})
         if not summary:
             continue
 
         result = summary.get("result", {})
-        uid_list = result.get("uids", [])
-
-        for uid in uid_list:
+        for uid in result.get("uids", []):
             rec = result.get(str(uid))
             if not rec or not isinstance(rec, dict):
                 continue
 
-            # Check clinical significance — new API uses germline_classification
-            sig_obj = rec.get("germline_classification") or rec.get("clinical_significance") or {}
+            sig_obj = (
+                rec.get("germline_classification")
+                or rec.get("clinical_significance")
+                or {}
+            )
             if not isinstance(sig_obj, dict):
                 continue
-            sig = sig_obj.get("description", "").lower()
-            if "pathogenic" not in sig:
+            if "pathogenic" not in sig_obj.get("description", "").lower():
                 continue
 
-            # Gene
-            gene = ""
             genes = rec.get("genes", [])
-            if genes and isinstance(genes, list) and isinstance(genes[0], dict):
-                gene = genes[0].get("symbol", "")
+            gene  = genes[0].get("symbol", "") if genes and isinstance(genes[0], dict) else ""
 
-            # Trait from title
-            title = rec.get("title", "")
-            trait = label
-
-            # Extract rsID from canonical_spdi via dbSNP lookup
             rsid = None
             for vs in rec.get("variation_set", []):
                 if not isinstance(vs, dict):
                     continue
-
-                # Try variation_xrefs first
                 for xref in vs.get("variation_xrefs", []):
                     if not isinstance(xref, dict):
                         continue
@@ -298,20 +365,18 @@ def fetch_clinvar(whitelist: dict) -> list[SurveillanceCandidate]:
                         if db_id:
                             rsid = f"rs{db_id}"
                             break
-
-                # Fallback: dbSNP lookup via chromosomal position
                 if not rsid:
                     spdi = vs.get("canonical_spdi", "")
                     if spdi and spdi.count(":") == 3:
                         accn, pos, ref, alt = spdi.split(":")
                         if ref and alt and len(ref) == 1 and len(alt) == 1:
-                            snp_search = _ncbi("esearch.fcgi", {
+                            sr = _ncbi("esearch.fcgi", {
                                 "db": "snp",
                                 "term": f"{accn}[ACCN] AND {pos}[CHRPOS38]",
                                 "retmax": 1,
                             })
-                            if snp_search:
-                                snp_ids = snp_search.get("esearchresult", {}).get("idlist", [])
+                            if sr:
+                                snp_ids = sr.get("esearchresult", {}).get("idlist", [])
                                 if snp_ids:
                                     rsid = f"rs{snp_ids[0]}"
                 if rsid:
@@ -322,16 +387,12 @@ def fetch_clinvar(whitelist: dict) -> list[SurveillanceCandidate]:
             seen.add(rsid)
 
             hit = GWASHit(
-                rsid=rsid,
-                trait=trait,
-                p_value=1e-10,
-                sample_size=10_000,
-                mapped_gene=gene,
+                rsid=rsid, trait=label,
+                p_value=1e-10, sample_size=10_000, mapped_gene=gene,
             )
-
             scored = score_candidate(
                 rsid=rsid,
-                trait=trait,
+                trait=f"[{category}] {label}",
                 gene=gene,
                 gwas_hits=[hit],
                 papers=[],
@@ -341,17 +402,22 @@ def fetch_clinvar(whitelist: dict) -> list[SurveillanceCandidate]:
 
             if scored.signal != EvidenceSignal.WEAK:
                 candidates.append(scored)
-                tag = " [IN WHITELIST]" if scored.already_in_whitelist else ""
-                logger.info("    + %s  %s  score=%d%s", rsid, trait[:30], scored.auto_score, tag)
+                logger.info("    + %s  score=%d%s",
+                            rsid, scored.auto_score,
+                            "  [IN WHITELIST]" if scored.already_in_whitelist else "")
 
     logger.info("ClinVar: %d candidates", len(candidates))
     return candidates
 
 
-# ── PGS Catalog ───────────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# SOURCE 3 — PGS CATALOG
+# ══════════════════════════════════════════════════════════════════════════════
+
 def fetch_pgs() -> dict[str, list[dict]]:
-    logger.info("=== PGS Catalog ===")
+    logger.info("=== PGS Catalog (%d conditions) ===", len(PGS_TRAITS))
     results: dict[str, list[dict]] = {}
+
     for condition, efo_ids in PGS_TRAITS.items():
         models: list[dict] = []
         for efo_id in efo_ids:
@@ -359,125 +425,153 @@ def fetch_pgs() -> dict[str, list[dict]]:
             if not data:
                 continue
             for s in data.get("results", []):
-                pgs_id = s.get("id", "")
+                pid = s.get("id", "")
                 models.append({
-                    "pgs_id":       pgs_id,
+                    "pgs_id":       pid,
                     "num_variants": s.get("variants_number", 0),
                     "trait":        s.get("trait_reported", ""),
-                    "ftp_url":      f"https://ftp.ebi.ac.uk/pub/databases/spot/pgs/scores/{pgs_id}/ScoringFiles/{pgs_id}.txt.gz",
-                    "info_url":     f"https://www.pgscatalog.org/score/{pgs_id}/",
+                    "ftp_url": (
+                        f"https://ftp.ebi.ac.uk/pub/databases/spot/pgs/scores/"
+                        f"{pid}/ScoringFiles/{pid}.txt.gz"
+                    ),
+                    "info_url": f"https://www.pgscatalog.org/score/{pid}/",
                 })
         models.sort(key=lambda x: x["num_variants"], reverse=True)
         if models:
             results[condition] = models[:5]
-            logger.info("  %s: top=%s (%d variants)",
+            logger.info("  %s: %s (%d variants)",
                         condition, models[0]["pgs_id"], models[0]["num_variants"])
+
     return results
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# MAIN
+# ══════════════════════════════════════════════════════════════════════════════
+
 def main() -> int:
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description="Nebula surveillance — finds new variant candidates weekly"
+    )
     parser.add_argument("--queue-path",     default="data/surveillance_queue.json")
     parser.add_argument("--whitelist-path", default="data/whitelist/whitelist_v0_1.csv")
     parser.add_argument("--dry-run",        action="store_true")
     parser.add_argument("--sources", nargs="+",
                         choices=["gwas", "clinvar", "pgs"],
                         default=["gwas", "clinvar", "pgs"])
+    parser.add_argument("--category", default=None,
+                        help="Filter: Fitness | Nutrition | Sleep | Recovery | "
+                             "Health Risk | Pharmacogenomics")
     args = parser.parse_args()
 
     if not NCBI_API_KEY:
-        logger.warning("NCBI_API_KEY not set — rate limited to 3 req/s")
+        logger.warning("NCBI_API_KEY not set — ClinVar will be rate-limited")
 
-    # Load whitelist as dict[rsid -> WhitelistEntry] — what scorer expects
+    # Load whitelist
     whitelist: dict = {}
     wl_path = Path(args.whitelist_path)
     if wl_path.exists():
         try:
             entries = load_whitelist(wl_path)
             whitelist = {e.rsid: e for e in entries}
-            logger.info("Whitelist: %d entries loaded", len(whitelist))
+            logger.info("Whitelist: %d entries", len(whitelist))
         except Exception as e:
-            logger.warning("Could not load whitelist via load_whitelist: %s — using CSV fallback", e)
+            logger.warning("load_whitelist failed (%s) — CSV fallback", e)
             with wl_path.open() as f:
                 for row in csv.DictReader(f):
                     r = row.get("rsid", "").strip()
                     if r:
                         whitelist[r] = None  # type: ignore
-            logger.info("Whitelist: %d rsIDs loaded (fallback)", len(whitelist))
+            logger.info("Whitelist: %d rsIDs (fallback)", len(whitelist))
+
+    # Category filter
+    global GWAS_TRAITS, CLINVAR_TERMS
+    if args.category:
+        cat = args.category.strip()
+        GWAS_TRAITS   = [(t, l, c) for t, l, c in GWAS_TRAITS   if c == cat]
+        CLINVAR_TERMS = [(t, l, c) for t, l, c in CLINVAR_TERMS if c == cat]
+        logger.info("Category filter '%s': %d GWAS, %d ClinVar",
+                    cat, len(GWAS_TRAITS), len(CLINVAR_TERMS))
 
     all_candidates: list[SurveillanceCandidate] = []
     pgs_models: dict = {}
     exit_code = 0
 
-    if "gwas" in args.sources:
-        try:
-            all_candidates.extend(fetch_gwas(whitelist))
+    if "gwas"    in args.sources:
+        try:    all_candidates.extend(fetch_gwas(whitelist))
         except Exception as e:
-            logger.error("GWAS failed: %s", e, exc_info=True)
-            exit_code = 2
+            logger.error("GWAS failed: %s", e, exc_info=True); exit_code = 2
 
     if "clinvar" in args.sources:
-        try:
-            all_candidates.extend(fetch_clinvar(whitelist))
+        try:    all_candidates.extend(fetch_clinvar(whitelist))
         except Exception as e:
-            logger.error("ClinVar failed: %s", e, exc_info=True)
-            exit_code = 2
+            logger.error("ClinVar failed: %s", e, exc_info=True); exit_code = 2
 
-    if "pgs" in args.sources:
-        try:
-            pgs_models = fetch_pgs()
+    if "pgs"     in args.sources:
+        try:    pgs_models = fetch_pgs()
         except Exception as e:
             logger.error("PGS failed: %s", e, exc_info=True)
 
-    # ── Summary ───────────────────────────────────────────────────────────────
     strong   = [c for c in all_candidates if c.signal == EvidenceSignal.STRONG_CANDIDATE]
     moderate = [c for c in all_candidates if c.signal == EvidenceSignal.MODERATE_CANDIDATE]
     contras  = [c for c in all_candidates if c.signal == EvidenceSignal.CONTRADICTS_EXISTING]
 
-    print("\n" + "═" * 62)
+    # Group by category
+    by_cat: dict[str, int] = {}
+    for c in all_candidates:
+        cat = c.trait.split("]")[0].lstrip("[") if c.trait.startswith("[") else "Other"
+        by_cat[cat] = by_cat.get(cat, 0) + 1
+
+    print("\n" + "═" * 64)
     print("NEBULA SURVEILLANCE RUN")
     print(f"  {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}"
           f"  |  sources: {', '.join(args.sources)}"
           f"  |  dry-run: {args.dry_run}")
-    print("─" * 62)
-    print(f"  Total candidates:       {len(all_candidates)}")
-    print(f"  Strong (needs review):  {len(strong)}")
-    print(f"  Moderate (watching):    {len(moderate)}")
-    print(f"  Contradictions:         {len(contras)}")
+    print("─" * 64)
+    print(f"  Total:         {len(all_candidates)}")
+    print(f"  Strong:        {len(strong)}   ← counselor review needed")
+    print(f"  Moderate:      {len(moderate)}  ← watching")
+    print(f"  Contradicts:   {len(contras)}   ← urgent if >0")
+
+    if by_cat:
+        print("\n  BY CATEGORY:")
+        for cat, n in sorted(by_cat.items()):
+            print(f"    {cat:<20} {n}")
 
     if strong:
-        print("\n  STRONG CANDIDATES — counselor review required:")
+        print("\n  ⚠  STRONG — needs counselor review before accepting:")
         for c in strong:
-            tag = " [ALREADY IN WHITELIST]" if c.already_in_whitelist else " [NEW]"
-            print(f"    {c.rsid:15}  {c.trait[:38]:38}  score={c.auto_score}{tag}")
+            print(f"    {c.rsid:15} {c.trait[:42]:42} score={c.auto_score}"
+                  f"{'  [IN WHITELIST]' if c.already_in_whitelist else '  [NEW]'}")
 
     if contras:
-        print("\n  CONTRADICTIONS — existing entries may need re-review:")
+        print("\n  ⚠  CONTRADICTIONS — re-review existing whitelist entries:")
         for c in contras:
-            print(f"    {c.rsid:15}  {c.trait[:38]}")
+            print(f"    {c.rsid:15} {c.trait[:42]}")
 
     if moderate:
-        print("\n  MODERATE — watching:")
+        print("\n  MODERATE — review via: python scripts/review_queue.py --list")
         for c in moderate:
-            tag = " [IN WHITELIST]" if c.already_in_whitelist else ""
-            print(f"    {c.rsid:15}  {c.trait[:38]:38}  score={c.auto_score}{tag}")
+            print(f"    {c.rsid:15} {c.trait[:42]:42} score={c.auto_score}"
+                  f"{'  [WL]' if c.already_in_whitelist else ''}")
 
     if pgs_models:
-        print("\n  PGS CATALOG — replace synthetic weights in nebula/engine/prs.py:")
-        for condition, models in pgs_models.items():
-            top = models[0]
-            print(f"    {condition}: {top['pgs_id']} ({top['num_variants']:,} variants)")
-            print(f"      {top['ftp_url']}")
+        print("\n  PGS CATALOG — updated weights available:")
+        for cond, models in pgs_models.items():
+            t = models[0]
+            print(f"    {cond:<8} {t['pgs_id']}  ({t['num_variants']:,} variants)")
+            print(f"             {t['ftp_url']}")
 
-    # ── Write queue ───────────────────────────────────────────────────────────
+    # Write queue
     if not args.dry_run and all_candidates:
         q_path = Path(args.queue_path)
-        queue = load_queue(q_path)
-        before = len(queue.candidates)
-        merge_candidates(queue, all_candidates)
-        save_queue(queue, q_path)
-        print(f"\n  Queue: {before} → {len(queue.candidates)} candidates")
+        q = load_queue(q_path)
+        before = len(q.candidates)
+        merge_candidates(q, all_candidates)
+        save_queue(q, q_path)
+        added = len(q.candidates) - before
+        print(f"\n  Queue: {before} → {len(q.candidates)} (+{added} new)")
+        print(f"  Review with: python scripts/review_queue.py --list")
 
     if not args.dry_run and pgs_models:
         out = Path("data/pgs_recommendations.json")
@@ -491,11 +585,8 @@ def main() -> int:
     if args.dry_run:
         print("\n  DRY RUN — queue not modified")
 
-    print("═" * 62)
-
-    if exit_code == 0 and (strong or contras):
-        exit_code = 1
-    return exit_code
+    print("═" * 64)
+    return 1 if (strong or contras) else exit_code
 
 
 if __name__ == "__main__":
