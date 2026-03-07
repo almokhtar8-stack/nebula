@@ -59,9 +59,9 @@ FIXED_DISCLAIMERS = [
         "updated as new research emerges. We recommend periodic re-evaluation."
     ),
     (
-        "This report was generated using synthetic demonstration data and is "
-        "for development and testing purposes only. It must not be used for "
-        "clinical decision-making."
+        "Polygenic risk scores in this report are computed from a limited variant "
+        "panel. Clinical genetic testing requires accredited laboratory conditions. "
+        "This report is for research and development purposes only."
     ),
 ]
 
