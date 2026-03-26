@@ -8,9 +8,7 @@ __pycache__/
 dist/
 build/
 .eggs/
-.Python
 pip-wheel-metadata/
-*.whl
 
 # ── Virtual environments ──────────────────────────────────────────────────────
 .venv/
@@ -26,11 +24,7 @@ coverage.xml
 htmlcov/
 .tox/
 .nox/
-
-# ── Type checking ─────────────────────────────────────────────────────────────
 .mypy_cache/
-.pyright/
-pyrightconfig.json
 
 # ── IDE ───────────────────────────────────────────────────────────────────────
 .vscode/
@@ -40,15 +34,13 @@ pyrightconfig.json
 .DS_Store
 Thumbs.db
 
-# ── Outputs & generated files ─────────────────────────────────────────────────
+# ── Outputs ───────────────────────────────────────────────────────────────────
 out/
-*.json
-!data/synthetic/*.json          # synthetic test data is tracked
-!pyproject.toml                 # project config is tracked
+*.pdf
 
 # ── GENOMIC DATA — NEVER COMMIT ───────────────────────────────────────────────
-# These patterns cover real user data. If any of these appear in a PR,
-# the PR must be rejected and the contributor contacted immediately.
+# Real user genomic data must NEVER enter this repository.
+# If any of these appear in a PR, the PR must be rejected immediately.
 *.vcf
 *.vcf.gz
 *.bcf
@@ -63,37 +55,33 @@ out/
 *.ped
 *.map
 *.raw
-*.genotype
-!data/synthetic/*.vcf           # synthetic test VCF is explicitly tracked
+!data/synthetic/*.vcf           # synthetic test VCF is explicitly allowed
 
-# ── Secrets & credentials ─────────────────────────────────────────────────────
+# ── JSON output files (gitignored except test fixtures) ──────────────────────
+*.json
+!data/synthetic/*.json          # synthetic test metadata is allowed
+!pyproject.toml                 # project config is allowed
+
+# ── Surveillance outputs ──────────────────────────────────────────────────────
+out/surveillance_queue.json
+out/surveillance_notification.txt
+out/surveillance_state.json
+out/surveillance.log
+data/review_log.jsonl
+rulesets/pending_rules.yml
+
+# ── Secrets and credentials ───────────────────────────────────────────────────
 .env
 .env.*
 *.pem
 *.key
 *.p12
-*.pfx
 secrets/
 credentials/
 *_secret*
 *_private*
-anthropic_key*
-ncbi_key*
-
-# ── Surveillance outputs ──────────────────────────────────────────────────────
-surveillance_queue.json         # queue contains candidate data — not committed
-out/surveillance_notification.txt
 
 # ── Logs ─────────────────────────────────────────────────────────────────────
 *.log
 logs/
 nebula.log
-
-# ── OS ────────────────────────────────────────────────────────────────────────
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-desktop.ini
